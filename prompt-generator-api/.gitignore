@@ -1,0 +1,12 @@
+# Build Result
+bin/
+obj/
+
+# Rider Project Files
+.idea/
+*.sln.iml
+
+# Logs and user setting
+Logs/
+*.DotSettings.user
+

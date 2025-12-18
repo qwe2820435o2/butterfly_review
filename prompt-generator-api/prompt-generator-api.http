@@ -1,0 +1,6 @@
+@tennis_wave_api_HostAddress = http://localhost:5161
+
+GET {{tennis_wave_api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,13 @@
+﻿using tennis_wave_api.Models.DTOs;
+
+namespace tennis_wave_api.Services.Interfaces;
+
+/// <summary>
+/// Jotform API client service
+/// </summary>
+public interface IJotformApiService
+{
+    Task<JotformApiResponseDto> GetReleaseSubmissionsPageAsync(int offset, int limit, CancellationToken cancellationToken = default);
+
+    Task<JotformApiResponseDto> GetSightingSubmissionsPageAsync(int offset, int limit, CancellationToken cancellationToken = default);
+}
