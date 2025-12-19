@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using System.Text.Json;
+using MongoDB.Bson;
 using tennis_wave_api.Models.DTOs;
 using tennis_wave_api.Models.Entities;
 
@@ -14,6 +15,9 @@ public class JotformMappingHelper
     {
         var entity = new ReleaseSubmission
         {
+            Answers = raw.Answers.ToDictionary(
+                kvp => kvp.Key,
+                kvp => CloneAnswerForMongo(kvp.Value)),
             SubmissionId = raw.Id,
             FormId = raw.FormId,
             Ip = raw.Ip,
@@ -88,6 +92,9 @@ public class JotformMappingHelper
     {
         var entity = new SightingSubmission
         {
+            Answers = raw.Answers.ToDictionary(
+                kvp => kvp.Key,
+                kvp => CloneAnswerForMongo(kvp.Value)),
             SubmissionId = raw.Id,
             FormId = raw.FormId,
             Ip = raw.Ip,
@@ -203,23 +210,23 @@ public class JotformMappingHelper
 
     private static string? GetStringAnswer(JotformSubmissionRawDto raw, string fieldId)
     {
-        if (!raw.Answers.TryGetValue(fieldId, out var answer) || answer.Answer is null)
+        if (!raw.Answers.TryGetValue(fieldId, out var answer) || answer.AnswerJson is null)
         {
             return null;
         }
 
-        var value = answer.Answer.Value;
+        var value = answer.AnswerJson.Value;
         return value.ValueKind == JsonValueKind.String ? value.GetString() : null;
     }
 
     private static JsonElement? GetAnswerObject(JotformSubmissionRawDto raw, string fieldId)
     {
-        if (!raw.Answers.TryGetValue(fieldId, out var answer) || answer.Answer is null)
+        if (!raw.Answers.TryGetValue(fieldId, out var answer) || answer.AnswerJson is null)
         {
             return null;
         }
 
-        var value = answer.Answer.Value;
+        var value = answer.AnswerJson.Value;
         return value.ValueKind == JsonValueKind.Object ? value : null;
     }
 
@@ -312,5 +319,52 @@ public class JotformMappingHelper
     {
         var answer = GetAnswer(raw, fieldId);
         return string.IsNullOrWhiteSpace(answer?.PrettyFormat) ? null : answer!.PrettyFormat;
+    }
+
+    /// <summary>
+    /// Clone answer DTO and populate BSON Answer for MongoDB storage.
+    /// </summary>
+    private static JotformAnswerRawDto CloneAnswerForMongo(JotformAnswerRawDto src)
+    {
+        return new JotformAnswerRawDto
+        {
+            Name = src.Name,
+            Order = src.Order,
+            Text = src.Text,
+            Type = src.Type,
+            Cfname = src.Cfname,
+            PrettyFormat = src.PrettyFormat,
+            Sublabels = src.Sublabels,
+            AnswerJson = src.AnswerJson,
+            Answer = ConvertToBsonValue(src.AnswerJson)
+        };
+    }
+
+    /// <summary>
+    /// Convert JsonElement value to BSON value for MongoDB storage.
+    /// </summary>
+    private static BsonValue ConvertToBsonValue(JsonElement? json)
+    {
+        if (json is null)
+        {
+            return BsonNull.Value;
+        }
+
+        var v = json.Value;
+
+        return v.ValueKind switch
+        {
+            JsonValueKind.String => new BsonString(v.GetString() ?? string.Empty),
+            JsonValueKind.Number => v.TryGetInt64(out var l)
+                ? (BsonValue)new BsonInt64(l)
+                : new BsonDouble(v.GetDouble()),
+            JsonValueKind.True => BsonBoolean.True,
+            JsonValueKind.False => BsonBoolean.False,
+            JsonValueKind.Object => BsonDocument.Parse(v.GetRawText()),
+            JsonValueKind.Array => BsonArray.Create(v.GetRawText()),
+            JsonValueKind.Null => BsonNull.Value,
+            JsonValueKind.Undefined => BsonNull.Value,
+            _ => BsonNull.Value
+        };
     }
 }

@@ -39,7 +39,6 @@ public class JotformSyncService : IJotformSyncService
         var totalUpserted = 0;
         var offset = 0;
         var limit = _settings.PageSize > 0 ? _settings.PageSize : 100;
-
         while (true)
         {
             var page = await _apiService.GetReleaseSubmissionsPageAsync(offset, limit, cancellationToken);
@@ -88,7 +87,6 @@ public class JotformSyncService : IJotformSyncService
         var totalUpserted = 0;
         var offset = 0;
         var limit = _settings.PageSize > 0 ? _settings.PageSize : 100;
-
         while (true)
         {
             var page = await _apiService.GetSightingSubmissionsPageAsync(offset, limit, cancellationToken);

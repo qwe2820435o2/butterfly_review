@@ -1,4 +1,5 @@
-﻿using MongoDB.Driver;
+﻿using MongoDB.Bson;
+using MongoDB.Driver;
 using tennis_wave_api.Data.Interfaces;
 using tennis_wave_api.Models.Entities;
 
@@ -33,6 +34,32 @@ public class SightingSubmissionRepository : ISightingSubmissionRepository
     public async Task UpsertBySubmissionIdAsync(SightingSubmission entity)
     {
         var filter = Builders<SightingSubmission>.Filter.Eq(x => x.SubmissionId, entity.SubmissionId);
+        
+        // Check if document exists
+        var existing = await _collection.Find(filter).FirstOrDefaultAsync();
+        if (existing != null)
+        {
+            // Document exists: MUST use existing Id (immutable field)
+            if (!string.IsNullOrEmpty(existing.Id))
+            {
+                entity.Id = existing.Id;
+            }
+            else
+            {
+                // Existing document has null Id (corrupted data): delete and re-insert
+                await _collection.DeleteOneAsync(filter);
+                entity.Id = ObjectId.GenerateNewId().ToString();
+            }
+        }
+        else
+        {
+            // New document: generate new ObjectId if Id is null
+            if (string.IsNullOrEmpty(entity.Id))
+            {
+                entity.Id = ObjectId.GenerateNewId().ToString();
+            }
+        }
+        
         await _collection.ReplaceOneAsync(
             filter,
             entity,
