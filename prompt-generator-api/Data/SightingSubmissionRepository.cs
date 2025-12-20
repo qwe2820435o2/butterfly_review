@@ -90,6 +90,28 @@ public class SightingSubmissionRepository : ISightingSubmissionRepository
         return list;
     }
 
+    public async Task<IReadOnlyList<SightingSubmission>> GetByEmailAsync(string email)
+    {
+        var filter = Builders<SightingSubmission>.Filter.Eq(x => x.Email, email);
+        var list = await _collection
+            .Find(filter)
+            .SortByDescending(x => x.CreatedAtUtc)
+            .ToListAsync();
+
+        return list;
+    }
+
+    public async Task<IReadOnlyList<SightingSubmission>> GetByTagNumberAsync(string tagNumber)
+    {
+        var filter = Builders<SightingSubmission>.Filter.Eq(x => x.TagNumber, tagNumber);
+        var list = await _collection
+            .Find(filter)
+            .SortByDescending(x => x.CreatedAtUtc)
+            .ToListAsync();
+
+        return list;
+    }
+
     public async Task DeleteByIdAsync(string id)
     {
         await _collection.DeleteOneAsync(x => x.Id == id);

@@ -17,5 +17,9 @@ public interface IReleaseSubmissionRepository
         DateTime? startUtc,
         DateTime? endUtc);
 
+    Task<IReadOnlyList<ReleaseSubmission>> GetByEmailAsync(string email);
+
+    Task<IReadOnlyList<ReleaseSubmission>> GetByTagNumberAsync(string tagNumber);
+
     Task DeleteByIdAsync(string id);
 }

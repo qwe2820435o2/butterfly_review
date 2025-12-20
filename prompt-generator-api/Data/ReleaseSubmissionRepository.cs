@@ -90,6 +90,28 @@ public class ReleaseSubmissionRepository : IReleaseSubmissionRepository
         return list;
     }
 
+    public async Task<IReadOnlyList<ReleaseSubmission>> GetByEmailAsync(string email)
+    {
+        var filter = Builders<ReleaseSubmission>.Filter.Eq(x => x.Email, email);
+        var list = await _collection
+            .Find(filter)
+            .SortByDescending(x => x.CreatedAtUtc)
+            .ToListAsync();
+
+        return list;
+    }
+
+    public async Task<IReadOnlyList<ReleaseSubmission>> GetByTagNumberAsync(string tagNumber)
+    {
+        var filter = Builders<ReleaseSubmission>.Filter.Eq(x => x.TagNumber, tagNumber);
+        var list = await _collection
+            .Find(filter)
+            .SortByDescending(x => x.CreatedAtUtc)
+            .ToListAsync();
+
+        return list;
+    }
+
     public async Task DeleteByIdAsync(string id)
     {
         await _collection.DeleteOneAsync(x => x.Id == id);

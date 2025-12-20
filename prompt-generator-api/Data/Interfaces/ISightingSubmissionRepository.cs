@@ -17,5 +17,9 @@ public interface ISightingSubmissionRepository
         DateTime? startUtc,
         DateTime? endUtc);
 
+    Task<IReadOnlyList<SightingSubmission>> GetByEmailAsync(string email);
+
+    Task<IReadOnlyList<SightingSubmission>> GetByTagNumberAsync(string tagNumber);
+
     Task DeleteByIdAsync(string id);
 }
