@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using tennis_wave_api.Data.Interfaces;
 using tennis_wave_api.Helpers;
@@ -18,17 +19,20 @@ public class JotformSyncService : IJotformSyncService
     private readonly IReleaseSubmissionRepository _releaseRepository;
     private readonly ISightingSubmissionRepository _sightingRepository;
     private readonly JotformSettings _settings;
+    private readonly ILogger<JotformSyncService> _logger;
 
     public JotformSyncService(
         IJotformApiService apiService,
         IReleaseSubmissionRepository releaseRepository,
         ISightingSubmissionRepository sightingRepository,
-        IOptions<JotformSettings> options)
+        IOptions<JotformSettings> options,
+        ILogger<JotformSyncService> logger)
     {
         _apiService = apiService;
         _releaseRepository = releaseRepository;
         _sightingRepository = sightingRepository;
         _settings = options.Value;
+        _logger = logger;
     }
 
     public async Task<int> SyncReleaseSubmissionsAsync(
@@ -39,14 +43,24 @@ public class JotformSyncService : IJotformSyncService
         var totalUpserted = 0;
         var offset = 0;
         var limit = _settings.PageSize > 0 ? _settings.PageSize : 100;
+        var pageNumber = 0;
+
+        _logger.LogInformation("Starting Release form sync. Time range: {StartUtc} to {EndUtc}", startUtc, endUtc);
+
         while (true)
         {
+            pageNumber++;
             var page = await _apiService.GetReleaseSubmissionsPageAsync(offset, limit, cancellationToken);
 
             if (page.Content == null || page.Content.Count == 0)
             {
+                _logger.LogInformation("Page {PageNumber}: No more data, sync completed", pageNumber);
                 break;
             }
+
+            // Collect matched records and their dates
+            var matchedRecords = new List<DateTime>();
+            var matchedEntities = new List<ReleaseSubmission>();
 
             foreach (var raw in page.Content)
             {
@@ -64,18 +78,41 @@ public class JotformSyncService : IJotformSyncService
                 entity.CreatedAtUtc = createdUtc;
                 entity.UpdatedAtUtc = DateTime.UtcNow;
 
+                matchedRecords.Add(createdUtc);
+                matchedEntities.Add(entity);
+            }
+
+            // Upsert matched records
+            foreach (var entity in matchedEntities)
+            {
                 await _releaseRepository.UpsertBySubmissionIdAsync(entity);
                 totalUpserted++;
             }
 
+            // Log progress for this page
+            if (matchedRecords.Count > 0)
+            {
+                var minDate = matchedRecords.Min();
+                var maxDate = matchedRecords.Max();
+                _logger.LogInformation(
+                    "Page {PageNumber} (offset {Offset}): Matched {MatchedCount} records. Date range: {MinDate:yyyy-MM-dd HH:mm:ss} to {MaxDate:yyyy-MM-dd HH:mm:ss}",
+                    pageNumber, offset, matchedRecords.Count, minDate, maxDate);
+            }
+            else
+            {
+                _logger.LogInformation("Page {PageNumber} (offset {Offset}): No records matched in time range", pageNumber, offset);
+            }
+
             if (page.Content.Count < limit)
             {
+                _logger.LogInformation("Page {PageNumber}: Last page reached, sync completed", pageNumber);
                 break;
             }
 
             offset += limit;
         }
 
+        _logger.LogInformation("Release form sync completed. Total upserted: {TotalUpserted}", totalUpserted);
         return totalUpserted;
     }
 
@@ -87,14 +124,24 @@ public class JotformSyncService : IJotformSyncService
         var totalUpserted = 0;
         var offset = 0;
         var limit = _settings.PageSize > 0 ? _settings.PageSize : 100;
+        var pageNumber = 0;
+
+        _logger.LogInformation("Starting Sighting form sync. Time range: {StartUtc} to {EndUtc}", startUtc, endUtc);
+
         while (true)
         {
+            pageNumber++;
             var page = await _apiService.GetSightingSubmissionsPageAsync(offset, limit, cancellationToken);
 
             if (page.Content == null || page.Content.Count == 0)
             {
+                _logger.LogInformation("Page {PageNumber}: No more data, sync completed", pageNumber);
                 break;
             }
+
+            // Collect matched records and their dates
+            var matchedRecords = new List<DateTime>();
+            var matchedEntities = new List<SightingSubmission>();
 
             foreach (var raw in page.Content)
             {
@@ -112,18 +159,41 @@ public class JotformSyncService : IJotformSyncService
                 entity.CreatedAtUtc = createdUtc;
                 entity.UpdatedAtUtc = DateTime.UtcNow;
 
+                matchedRecords.Add(createdUtc);
+                matchedEntities.Add(entity);
+            }
+
+            // Upsert matched records
+            foreach (var entity in matchedEntities)
+            {
                 await _sightingRepository.UpsertBySubmissionIdAsync(entity);
                 totalUpserted++;
             }
 
+            // Log progress for this page
+            if (matchedRecords.Count > 0)
+            {
+                var minDate = matchedRecords.Min();
+                var maxDate = matchedRecords.Max();
+                _logger.LogInformation(
+                    "Page {PageNumber} (offset {Offset}): Matched {MatchedCount} records. Date range: {MinDate:yyyy-MM-dd HH:mm:ss} to {MaxDate:yyyy-MM-dd HH:mm:ss}",
+                    pageNumber, offset, matchedRecords.Count, minDate, maxDate);
+            }
+            else
+            {
+                _logger.LogInformation("Page {PageNumber} (offset {Offset}): No records matched in time range", pageNumber, offset);
+            }
+
             if (page.Content.Count < limit)
             {
+                _logger.LogInformation("Page {PageNumber}: Last page reached, sync completed", pageNumber);
                 break;
             }
 
             offset += limit;
         }
 
+        _logger.LogInformation("Sighting form sync completed. Total upserted: {TotalUpserted}", totalUpserted);
         return totalUpserted;
     }
 
