@@ -235,10 +235,7 @@ export const getStatusDisplay = (status: 'Alive' | 'Dead' | 'Unknown'): {
 export interface YearInReview {
   year: number;
   overview: OverviewStatistics;
-  monthlyStats: MonthlyStatistics[];
   geographicDistribution: GeographicDistribution;
-  topContributors: Contributor[];
-  achievements: Achievements;
 }
 
 export interface OverviewStatistics {
@@ -249,14 +246,6 @@ export interface OverviewStatistics {
   averageSurvivalDays?: number;
   totalFlightDistanceKm: number;
   survivalRate?: number;
-}
-
-export interface MonthlyStatistics {
-  month: number;
-  monthName: string;
-  releases: number;
-  sightings: number;
-  uniqueTagNumbersSighted: number;
 }
 
 export interface GeographicDistribution {
@@ -286,52 +275,5 @@ export interface GeographicBounds {
   maxLatitude: number;
   minLongitude: number;
   maxLongitude: number;
-}
-
-export interface Contributor {
-  email: string;
-  sightingCount: number;
-  uniqueTagNumbersReported: number;
-  rank: number;
-}
-
-export interface Achievements {
-  longestFlight?: FlightRecord;
-  longestSurvival?: SurvivalRecord;
-  mostSighted?: MostSighted;
-  farthestSighting?: FarthestSighting;
-}
-
-export interface FlightRecord {
-  tagNumber: string;
-  totalDistanceKm: number;
-  sightingCount: number;
-  survivalDays?: number;
-  releaseDate?: string;
-  lastSightingDate?: string;
-}
-
-export interface SurvivalRecord {
-  tagNumber: string;
-  survivalDays: number;
-  releaseDate?: string;
-  lastSightingDate?: string;
-  status?: string;
-}
-
-export interface MostSighted {
-  tagNumber: string;
-  sightingCount: number;
-  releaseDate?: string;
-  firstSightingDate?: string;
-  lastSightingDate?: string;
-}
-
-export interface FarthestSighting {
-  tagNumber: string;
-  distanceKm: number;
-  releaseLocation?: LocationPoint;
-  sightingLocation?: LocationPoint;
-  sightingDate?: string;
 }
 
