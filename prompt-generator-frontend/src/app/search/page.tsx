@@ -33,12 +33,12 @@ export default function SearchPage() {
       setHasSearched(true);
 
       if (results.length === 0) {
-        toast.info("未找到相关记录", {
-          description: `邮箱 ${email} 没有关联的蝴蝶标签号`
+        toast.info("No records found", {
+          description: `No butterfly tags associated with email ${email}`
         });
       } else {
-        toast.success(`找到 ${results.length} 个标签号`, {
-          description: `已为您找到 ${results.length} 个相关的蝴蝶标签`
+        toast.success(`Found ${results.length} tag(s)`, {
+          description: `Found ${results.length} butterfly tag(s) associated with your email`
         });
       }
     } catch (error) {
@@ -46,16 +46,16 @@ export default function SearchPage() {
       setHasSearched(true);
       setSearchResults([]);
       
-      let errorMessage = "查询失败，请稍后重试";
+      let errorMessage = "Search failed, please try again later";
       
       if (error && typeof error === "object" && "isAxiosError" in error) {
         const axiosError = error as AxiosError;
         if (axiosError.response?.status === 400) {
-          errorMessage = "请求参数错误，请检查邮箱格式";
+          errorMessage = "Invalid request parameters, please check email format";
         } else if (axiosError.response?.status === 404) {
-          errorMessage = "未找到相关记录";
+          errorMessage = "No records found";
         } else if (axiosError.response?.status === 500) {
-          errorMessage = "服务器错误，请稍后重试";
+          errorMessage = "Server error, please try again later";
         }
       }
       
@@ -85,19 +85,19 @@ export default function SearchPage() {
               <Search className="w-10 h-10 text-white" />
             </div>
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
-              查找我的蝴蝶标签
+              Find My Butterfly Tags
             </h1>
             <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              输入您的邮箱地址，查找您释放的蝴蝶标签号，查看它们的飞行轨迹
+              Enter your email address to find your released butterfly tags and view their flight trajectories
             </p>
           </div>
 
           {/* Search Card */}
           <Card className="shadow-lg mb-8">
             <CardHeader>
-              <CardTitle>搜索</CardTitle>
+              <CardTitle>Search</CardTitle>
               <CardDescription>
-                请输入您注册时使用的邮箱地址
+                Please enter your email
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -116,7 +116,7 @@ export default function SearchPage() {
                   <CardContent className="py-12 text-center">
                     <div className="flex flex-col items-center justify-center space-y-4">
                       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
-                      <p className="text-gray-600 dark:text-gray-300">正在查询...</p>
+                      <p className="text-gray-600 dark:text-gray-300">Searching...</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -124,10 +124,10 @@ export default function SearchPage() {
                 <>
                   <div className="mb-6">
                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                      找到 {searchResults.length} 个标签号
+                      Found {searchResults.length} tag(s)
                     </h2>
                     <p className="text-gray-600 dark:text-gray-300">
-                      点击"查看轨迹"按钮可以在地图上查看蝴蝶的完整飞行路径
+                      Click the "View Trajectory" button to see the complete flight path on the map
                     </p>
                   </div>
                   
@@ -150,10 +150,10 @@ export default function SearchPage() {
                       </div>
                       <div>
                         <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                          未找到相关记录
+                          No Records Found
                         </h3>
                         <p className="text-gray-600 dark:text-gray-300 max-w-md">
-                          该邮箱地址没有关联的蝴蝶标签号。请确认您输入的邮箱地址是否正确，或者该邮箱尚未参与蝴蝶释放项目。
+                          No butterfly tags are associated with this email address. Please verify that the email address is correct, or this email may not have participated in the butterfly release project.
                         </p>
                       </div>
                     </div>
@@ -169,26 +169,26 @@ export default function SearchPage() {
               <CardHeader>
                 <div className="flex items-center space-x-2">
                   <Sparkles className="w-5 h-5 text-orange-600 dark:text-orange-400" />
-                  <CardTitle>使用说明</CardTitle>
+                  <CardTitle>Instructions</CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-3 text-gray-600 dark:text-gray-300">
                   <li className="flex items-start">
                     <span className="mr-2">•</span>
-                    <span>输入您注册时使用的邮箱地址进行查询</span>
+                    <span>Enter the email address you used for registration to search</span>
                   </li>
                   <li className="flex items-start">
                     <span className="mr-2">•</span>
-                    <span>系统将显示该邮箱关联的所有蝴蝶标签号</span>
+                    <span>The system will display all butterfly tag numbers associated with that email</span>
                   </li>
                   <li className="flex items-start">
                     <span className="mr-2">•</span>
-                    <span>点击"查看轨迹"按钮可以在地图上查看蝴蝶的完整飞行路径</span>
+                    <span>Click the "View Trajectory" button to see the complete flight path on the map</span>
                   </li>
                   <li className="flex items-start">
                     <span className="mr-2">•</span>
-                    <span>每个标签号卡片显示释放日期、最后目击日期、存活状态等信息</span>
+                    <span>Each tag card displays release date, last sighting date, survival status, and more</span>
                   </li>
                 </ul>
               </CardContent>

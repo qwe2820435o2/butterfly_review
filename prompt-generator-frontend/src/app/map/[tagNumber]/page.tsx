@@ -15,9 +15,9 @@ import dynamic from "next/dynamic";
 import { butterflyService } from "@/services/butterflyService";
 import { ReleaseSubmission, SightingSubmission, formatDate, getStatusDisplay, calculateSurvivalDays } from "@/types/butterfly";
 
-// Dynamically import map component to avoid SSR issues
-const ButterflyMap = dynamic(
-  () => import("@/components/butterfly/ButterflyMap"),
+// Dynamically import Google Maps component to avoid SSR issues
+const GoogleButterflyMap = dynamic(
+  () => import("@/components/butterfly/GoogleButterflyMap"),
   { 
     ssr: false,
     loading: () => (
@@ -64,20 +64,20 @@ export default function TrajectoryPage() {
       setSightings(data.sightings);
 
       if (!data.release && data.sightings.length === 0) {
-        setError("未找到该标签号的记录");
-        toast.info("未找到记录", {
-          description: `标签号 ${tagNumber} 没有相关的释放或目击记录`
+        setError("No records found for this tag number");
+        toast.info("No records found", {
+          description: `Tag number ${tagNumber} has no associated release or sighting records`
         });
       }
     } catch (err) {
       console.error("Load trajectory error:", err);
-      setError("加载轨迹数据失败");
+      setError("Failed to load trajectory data");
       
-      let errorMessage = "加载失败，请稍后重试";
+      let errorMessage = "Failed to load, please try again later";
       if (err && typeof err === "object" && "isAxiosError" in err) {
         const axiosError = err as AxiosError;
         if (axiosError.response?.status === 404) {
-          errorMessage = "未找到该标签号的记录";
+          errorMessage = "No records found for this tag number";
         }
       }
       
@@ -94,7 +94,7 @@ export default function TrajectoryPage() {
       ? {
           lat: release.latitude,
           lng: release.longitude,
-          label: release.address || `释放点`,
+          label: release.address || `Release Point`,
           description: release.notes,
           type: "release",
           date: release.releaseDatePretty || formatDate(release.releaseDateTimeUtc)
@@ -106,7 +106,7 @@ export default function TrajectoryPage() {
       .map((sighting, index) => ({
         lat: sighting.latitude!,
         lng: sighting.longitude!,
-        label: sighting.address || `目击点 ${index + 1}`,
+        label: sighting.address || `Sighting Point ${index + 1}`,
         description: sighting.condition,
         type: "sighting" as const,
         date: sighting.sightingDatePretty || formatDate(sighting.sightingDateTimeUtc)
@@ -184,7 +184,7 @@ export default function TrajectoryPage() {
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
               <Loader2 className="w-12 h-12 animate-spin text-orange-600 mx-auto mb-4" />
-              <p className="text-gray-600 dark:text-gray-300">正在加载轨迹数据...</p>
+              <p className="text-gray-600 dark:text-gray-300">Loading trajectory data...</p>
             </div>
           </div>
         </div>
@@ -204,15 +204,15 @@ export default function TrajectoryPage() {
                 </div>
                 <div>
                   <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                    {error || "未找到记录"}
+                    {error || "No Records Found"}
                   </h3>
                   <p className="text-gray-600 dark:text-gray-300 mb-6">
-                    标签号 <span className="font-mono font-semibold">{tagNumber}</span> 没有相关的释放或目击记录
+                    Tag number <span className="font-mono font-semibold">{tagNumber}</span> has no associated release or sighting records
                   </p>
                   <Link href="/search">
                     <Button variant="outline">
                       <ArrowLeft className="w-4 h-4 mr-2" />
-                      返回搜索
+                      Back to Search
                     </Button>
                   </Link>
                 </div>
@@ -232,14 +232,14 @@ export default function TrajectoryPage() {
           <Link href="/search">
             <Button variant="ghost" className="mb-4">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              返回搜索
+              Back to Search
             </Button>
           </Link>
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">
-            {tagNumber} 的轨迹
+            Trajectory of {tagNumber}
           </h1>
           <p className="text-gray-600 dark:text-gray-300">
-            查看蝴蝶从释放到目击的完整飞行路径
+            View the complete flight path from release to sighting
           </p>
         </div>
 
@@ -248,13 +248,13 @@ export default function TrajectoryPage() {
           <div className="lg:col-span-2">
             <Card className="shadow-lg">
               <CardHeader>
-                <CardTitle>飞行轨迹地图</CardTitle>
+                <CardTitle>Flight Trajectory Map</CardTitle>
                 <CardDescription>
-                  红色标记：释放点 | 蓝色标记：目击点 | 橙色线条：飞行路径
+                  Red markers: Release points | Blue markers: Sighting points | Orange lines: Flight paths
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ButterflyMap
+                <GoogleButterflyMap
                   releasePoint={releasePoint}
                   sightingPoints={sightingPoints}
                   className="h-[600px] w-full rounded-lg"
@@ -268,11 +268,11 @@ export default function TrajectoryPage() {
             {/* Summary Card */}
             <Card className="shadow-lg">
               <CardHeader>
-                <CardTitle>标签信息</CardTitle>
+                <CardTitle>Tag Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">标签号</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Tag Number</p>
                   <p className="text-lg font-mono font-semibold text-gray-900 dark:text-white">
                     {tagNumber}
                   </p>
@@ -280,7 +280,7 @@ export default function TrajectoryPage() {
 
                 {status && (
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">状态</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Status</p>
                     <Badge className={`${status.bgColor} ${status.color} border-0`}>
                       {status.text}
                     </Badge>
@@ -291,7 +291,7 @@ export default function TrajectoryPage() {
                   <div className="flex items-start">
                     <Calendar className="w-4 h-4 mr-2 text-orange-600 dark:text-orange-400 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">释放日期</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Release Date</p>
                       <p className="text-sm font-medium text-gray-900 dark:text-white">
                         {formatDate(release.releaseDateTimeUtc)}
                       </p>
@@ -303,7 +303,7 @@ export default function TrajectoryPage() {
                   <div className="flex items-start">
                     <Eye className="w-4 h-4 mr-2 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">最后目击</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Last Sighting</p>
                       <p className="text-sm font-medium text-gray-900 dark:text-white">
                         {formatDate(sightings[sightings.length - 1].sightingDateTimeUtc)}
                       </p>
@@ -315,9 +315,9 @@ export default function TrajectoryPage() {
                   <div className="flex items-start">
                     <Clock className="w-4 h-4 mr-2 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">存活天数</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Survival Days</p>
                       <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        {survivalDays} 天
+                        {survivalDays} day(s)
                       </p>
                     </div>
                   </div>
@@ -327,18 +327,18 @@ export default function TrajectoryPage() {
                   <div className="flex items-start">
                     <MapPin className="w-4 h-4 mr-2 text-purple-600 dark:text-purple-400 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">总飞行距离</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Total Flight Distance</p>
                       <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        {totalDistance.toFixed(2)} 公里
+                        {totalDistance.toFixed(2)} km
                       </p>
                     </div>
                   </div>
                 )}
 
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">目击次数</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Sighting Count</p>
                   <p className="text-lg font-semibold text-purple-600 dark:text-purple-400">
-                    {sightings.length} 次
+                    {sightings.length} time(s)
                   </p>
                 </div>
               </CardContent>
@@ -348,18 +348,18 @@ export default function TrajectoryPage() {
             {release && (
               <Card className="shadow-lg">
                 <CardHeader>
-                  <CardTitle>释放详情</CardTitle>
+                  <CardTitle>Release Details</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
                   {release.address && (
                     <div>
-                      <p className="text-gray-600 dark:text-gray-400">地点</p>
+                      <p className="text-gray-600 dark:text-gray-400">Location</p>
                       <p className="text-gray-900 dark:text-white">{release.address}</p>
                     </div>
                   )}
                   {release.notes && (
                     <div>
-                      <p className="text-gray-600 dark:text-gray-400">备注</p>
+                      <p className="text-gray-600 dark:text-gray-400">Notes</p>
                       <p className="text-gray-900 dark:text-white">{release.notes}</p>
                     </div>
                   )}

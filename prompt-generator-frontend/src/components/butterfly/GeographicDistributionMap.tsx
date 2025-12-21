@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import L from "leaflet";
 import { LatLngExpression, LatLngBounds } from "leaflet";
@@ -50,6 +50,21 @@ export default function GeographicDistributionMap({
   geographicDistribution,
   className = "h-[600px] w-full"
 }: GeographicDistributionMapProps) {
+  const [isMounted, setIsMounted] = useState(false);
+  const [mapKey, setMapKey] = useState(0);
+
+  // Ensure component is mounted on client side
+  useEffect(() => {
+    setIsMounted(true);
+    // Generate a unique key to force remount when data changes
+    const releaseCount = geographicDistribution.releaseLocations.length;
+    const sightingCount = geographicDistribution.sightingLocations.length;
+    const boundsKey = geographicDistribution.bounds
+      ? `${geographicDistribution.bounds.minLatitude}-${geographicDistribution.bounds.maxLatitude}-${geographicDistribution.bounds.minLongitude}-${geographicDistribution.bounds.maxLongitude}`
+      : 'no-bounds';
+    setMapKey(Date.now());
+  }, [geographicDistribution]);
+
   // Calculate center point from bounds or locations
   const getCenter = (): LatLngExpression => {
     if (geographicDistribution.bounds) {
@@ -136,7 +151,7 @@ export default function GeographicDistributionMap({
     if (!dateString) return "";
     try {
       const date = new Date(dateString);
-      return date.toLocaleDateString('zh-CN', {
+      return date.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
         day: 'numeric'
@@ -146,9 +161,19 @@ export default function GeographicDistributionMap({
     }
   };
 
+  // Don't render map until component is mounted
+  if (!isMounted) {
+    return (
+      <div className={className} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="text-gray-500">Loading map...</div>
+      </div>
+    );
+  }
+
   return (
-    <div className={className}>
+    <div className={className} key={`geo-map-wrapper-${mapKey}`}>
       <MapContainer
+        key={`geo-map-${mapKey}`}
         center={center}
         zoom={zoom}
         style={{ height: "100%", width: "100%", zIndex: 0 }}
@@ -194,12 +219,12 @@ export default function GeographicDistributionMap({
           >
             <Popup>
               <div className="p-2 min-w-[150px]">
-                <h3 className="font-bold text-red-600 mb-1 text-sm">释放点</h3>
+                <h3 className="font-bold text-red-600 mb-1 text-sm">Release Point</h3>
                 {location.address && (
                   <p className="text-xs text-gray-700 mb-1">{location.address}</p>
                 )}
                 {location.date && (
-                  <p className="text-xs text-gray-500">日期: {formatDate(location.date)}</p>
+                  <p className="text-xs text-gray-500">Date: {formatDate(location.date)}</p>
                 )}
                 <p className="text-xs text-gray-400 mt-1">
                   {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
@@ -225,12 +250,12 @@ export default function GeographicDistributionMap({
           >
             <Popup>
               <div className="p-2 min-w-[150px]">
-                <h3 className="font-bold text-blue-600 mb-1 text-sm">目击点</h3>
+                <h3 className="font-bold text-blue-600 mb-1 text-sm">Sighting Point</h3>
                 {location.address && (
                   <p className="text-xs text-gray-700 mb-1">{location.address}</p>
                 )}
                 {location.date && (
-                  <p className="text-xs text-gray-500">日期: {formatDate(location.date)}</p>
+                  <p className="text-xs text-gray-500">Date: {formatDate(location.date)}</p>
                 )}
                 <p className="text-xs text-gray-400 mt-1">
                   {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
@@ -257,14 +282,14 @@ export default function GeographicDistributionMap({
           >
             <Popup>
               <div className="p-2 min-w-[200px]">
-                <h3 className="font-bold text-orange-600 mb-1">🏆 最活跃释放地点</h3>
+                <h3 className="font-bold text-orange-600 mb-1">🏆 Most Active Release Location</h3>
                 {geographicDistribution.mostActiveReleaseLocation.address && (
                   <p className="text-sm text-gray-700 mb-1">
                     {geographicDistribution.mostActiveReleaseLocation.address}
                   </p>
                 )}
                 <p className="text-sm font-semibold text-orange-600">
-                  释放次数: {geographicDistribution.mostActiveReleaseLocation.count}
+                  Release Count: {geographicDistribution.mostActiveReleaseLocation.count}
                 </p>
               </div>
             </Popup>
@@ -288,14 +313,14 @@ export default function GeographicDistributionMap({
           >
             <Popup>
               <div className="p-2 min-w-[200px]">
-                <h3 className="font-bold text-blue-600 mb-1">🏆 最活跃目击地点</h3>
+                <h3 className="font-bold text-blue-600 mb-1">🏆 Most Active Sighting Location</h3>
                 {geographicDistribution.mostActiveSightingLocation.address && (
                   <p className="text-sm text-gray-700 mb-1">
                     {geographicDistribution.mostActiveSightingLocation.address}
                   </p>
                 )}
                 <p className="text-sm font-semibold text-blue-600">
-                  目击次数: {geographicDistribution.mostActiveSightingLocation.count}
+                  Sighting Count: {geographicDistribution.mostActiveSightingLocation.count}
                 </p>
               </div>
             </Popup>

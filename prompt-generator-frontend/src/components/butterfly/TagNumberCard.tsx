@@ -55,7 +55,7 @@ export default function TagNumberCard({
                 {summary.tagNumber}
               </CardTitle>
               <CardDescription className="mt-1 text-gray-600 dark:text-gray-300">
-                标签号
+                Tag Number
               </CardDescription>
             </div>
           </div>
@@ -72,7 +72,7 @@ export default function TagNumberCard({
           {/* Release Date */}
           <div className="flex items-center text-sm text-gray-600 dark:text-gray-300">
             <Calendar className="w-4 h-4 mr-2 text-orange-600 dark:text-orange-400 flex-shrink-0" />
-            <span className="font-medium mr-2">释放日期:</span>
+            <span className="font-medium mr-2">Release Date:</span>
             <span>{releaseDate}</span>
           </div>
 
@@ -80,23 +80,23 @@ export default function TagNumberCard({
           {summary.lastSightingDate ? (
             <div className="flex items-center text-sm text-gray-600 dark:text-gray-300">
               <Eye className="w-4 h-4 mr-2 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-              <span className="font-medium mr-2">最后目击:</span>
+              <span className="font-medium mr-2">Last Sighting:</span>
               <span>{lastSightingDate}</span>
             </div>
           ) : (
             <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
               <Eye className="w-4 h-4 mr-2 flex-shrink-0" />
-              <span className="font-medium mr-2">最后目击:</span>
-              <span>暂无目击记录</span>
+              <span className="font-medium mr-2">Last Sighting:</span>
+              <span>No sighting records</span>
             </div>
           )}
 
           {/* Sighting Count */}
           <div className="flex items-center text-sm text-gray-600 dark:text-gray-300">
             <Eye className="w-4 h-4 mr-2 text-purple-600 dark:text-purple-400 flex-shrink-0" />
-            <span className="font-medium mr-2">目击次数:</span>
+            <span className="font-medium mr-2">Sighting Count:</span>
             <span className="font-semibold text-purple-600 dark:text-purple-400">
-              {summary.sightingCount} 次
+              {summary.sightingCount} time(s)
             </span>
           </div>
 
@@ -104,9 +104,9 @@ export default function TagNumberCard({
           {summary.survivalDays !== undefined && (
             <div className="flex items-center text-sm text-gray-600 dark:text-gray-300">
               <Clock className="w-4 h-4 mr-2 text-green-600 dark:text-green-400 flex-shrink-0" />
-              <span className="font-medium mr-2">存活天数:</span>
+              <span className="font-medium mr-2">Survival Days:</span>
               <span className="font-semibold text-green-600 dark:text-green-400">
-                {summary.survivalDays} 天
+                {summary.survivalDays} day(s)
               </span>
             </div>
           )}
@@ -116,7 +116,7 @@ export default function TagNumberCard({
             <div className="flex items-start text-sm text-gray-600 dark:text-gray-300">
               <MapPin className="w-4 h-4 mr-2 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
-                <span className="font-medium mr-2">释放地点:</span>
+                <span className="font-medium mr-2">Release Location:</span>
                 <span className="text-xs">
                   {summary.releaseLocation.address || 
                    `${summary.releaseLocation.latitude.toFixed(4)}, ${summary.releaseLocation.longitude.toFixed(4)}`}
@@ -133,7 +133,7 @@ export default function TagNumberCard({
                 onClick={handleViewTrajectory}
               >
                 <MapPin className="w-4 h-4 mr-2" />
-                查看轨迹
+                View Trajectory
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </Link>

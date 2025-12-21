@@ -51,12 +51,12 @@ export default function EmailSearchForm({ onSearch, isLoading = false }: EmailSe
     
     // Validation
     if (!trimmedEmail) {
-      setError("请输入邮箱地址");
+      setError("Please enter an email address");
       return;
     }
 
     if (!validateEmail(trimmedEmail)) {
-      setError("请输入有效的邮箱地址");
+      setError("Please enter a valid email address");
       return;
     }
 
@@ -83,12 +83,12 @@ export default function EmailSearchForm({ onSearch, isLoading = false }: EmailSe
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="email">邮箱地址</Label>
+        <Label htmlFor="email">Email Address</Label>
         <div className="relative">
           <Input
             id="email"
             type="email"
-            placeholder="例如: user@example.com"
+            placeholder="e.g., user@example.com"
             value={email}
             onChange={handleInputChange}
             onKeyPress={handleKeyPress}
@@ -118,12 +118,12 @@ export default function EmailSearchForm({ onSearch, isLoading = false }: EmailSe
         {isLoading ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            查询中...
+            Searching...
           </>
         ) : (
           <>
             <Search className="mr-2 h-4 w-4" />
-            查询
+            Search
           </>
         )}
       </Button>

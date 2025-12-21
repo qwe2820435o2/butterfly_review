@@ -44,7 +44,7 @@ export default function YearInReviewPage() {
     if (year && year >= 2000 && year <= 2100) {
       loadYearInReview();
     } else {
-      setError("无效的年份");
+      setError("Invalid year");
       setIsLoading(false);
     }
   }, [year]);
@@ -59,13 +59,13 @@ export default function YearInReviewPage() {
       setData(yearData);
     } catch (err) {
       console.error("Load year in review error:", err);
-      setError("加载年度报告失败");
+      setError("Failed to load year in review");
 
-      let errorMessage = "加载失败，请稍后重试";
+      let errorMessage = "Failed to load, please try again later";
       if (err && typeof err === "object" && "isAxiosError" in err) {
         const axiosError = err as AxiosError;
         if (axiosError.response?.status === 404) {
-          errorMessage = "未找到该年份的数据";
+          errorMessage = "No data found for this year";
         }
       }
 
@@ -83,7 +83,7 @@ export default function YearInReviewPage() {
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
               <Loader2 className="w-12 h-12 animate-spin text-orange-600 mx-auto mb-4" />
-              <p className="text-gray-600 dark:text-gray-300">正在加载年度报告...</p>
+              <p className="text-gray-600 dark:text-gray-300">Loading year in review...</p>
             </div>
           </div>
         </div>
@@ -103,20 +103,20 @@ export default function YearInReviewPage() {
                 </div>
                 <div>
                   <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                    {error || "未找到数据"}
+                    {error || "No Data Found"}
                   </h3>
                   <p className="text-gray-600 dark:text-gray-300 mb-6">
-                    {year} 年没有相关的数据记录
+                    No data records found for year {year}
                   </p>
                   <div className="flex gap-4 justify-center">
                     <Link href="/search">
                       <Button variant="outline">
                         <ArrowLeft className="w-4 h-4 mr-2" />
-                        返回搜索
+                        Back to Search
                       </Button>
                     </Link>
                     <Button onClick={() => router.push(`/year-in-review/${new Date().getFullYear()}`)}>
-                      查看当前年份
+                      View Current Year
                     </Button>
                   </div>
                 </div>
@@ -140,11 +140,11 @@ export default function YearInReviewPage() {
             <Link href="/search">
               <Button variant="ghost" size="sm">
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                返回
+                Back
               </Button>
             </Link>
             <div className="text-sm text-gray-600 dark:text-gray-400">
-              {year} 年度报告
+              {year} Year in Review
             </div>
           </div>
         </div>
@@ -163,7 +163,7 @@ export default function YearInReviewPage() {
                 Year in Review
               </h2>
               <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
-                感谢所有志愿者的贡献，让我们一起回顾这一年的精彩数据
+                Thank you to all volunteers for their contributions. Let's review the amazing data from this year
               </p>
             </div>
             <div className="flex justify-center">
@@ -174,7 +174,7 @@ export default function YearInReviewPage() {
                 }}
                 className="bg-orange-600 hover:bg-orange-700 text-white transition-transform hover:scale-105"
               >
-                开始探索
+                Start Exploring
               </Button>
             </div>
           </div>
@@ -187,10 +187,10 @@ export default function YearInReviewPage() {
           <ScrollReveal direction="up" delay={0}>
             <div className="text-center mb-12">
               <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-                总览数据
+                Overview Statistics
               </h2>
               <p className="text-lg text-gray-600 dark:text-gray-300">
-                {year} 年项目的核心数据指标
+                Core data metrics for the {year} project
               </p>
             </div>
           </ScrollReveal>
@@ -201,7 +201,7 @@ export default function YearInReviewPage() {
               <Card className="shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">总释放数量</CardTitle>
+                    <CardTitle className="text-lg">Total Releases</CardTitle>
                     <Sparkles className="w-6 h-6 text-orange-600" />
                   </div>
                 </CardHeader>
@@ -210,7 +210,7 @@ export default function YearInReviewPage() {
                     <AnimatedNumber value={data.overview.totalReleases} duration={1500} />
                   </div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    本年度释放的蝴蝶总数
+                    Total butterflies released this year
                   </p>
                 </CardContent>
               </Card>
@@ -221,7 +221,7 @@ export default function YearInReviewPage() {
               <Card className="shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">总目击次数</CardTitle>
+                    <CardTitle className="text-lg">Total Sightings</CardTitle>
                     <Eye className="w-6 h-6 text-blue-600" />
                   </div>
                 </CardHeader>
@@ -230,7 +230,7 @@ export default function YearInReviewPage() {
                     <AnimatedNumber value={data.overview.totalSightings} duration={1500} />
                   </div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    所有目击记录的总数
+                    Total number of sighting records
                   </p>
                 </CardContent>
               </Card>
@@ -241,7 +241,7 @@ export default function YearInReviewPage() {
               <Card className="shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">参与志愿者</CardTitle>
+                    <CardTitle className="text-lg">Volunteers</CardTitle>
                     <Users className="w-6 h-6 text-green-600" />
                   </div>
                 </CardHeader>
@@ -250,7 +250,7 @@ export default function YearInReviewPage() {
                     <AnimatedNumber value={data.overview.uniqueVolunteers} duration={1500} />
                   </div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    参与项目的志愿者总数
+                    Total number of volunteers participating
                   </p>
                 </CardContent>
               </Card>
@@ -261,7 +261,7 @@ export default function YearInReviewPage() {
               <Card className="shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">覆盖地区</CardTitle>
+                    <CardTitle className="text-lg">Regions Covered</CardTitle>
                     <MapPin className="w-6 h-6 text-purple-600" />
                   </div>
                 </CardHeader>
@@ -270,7 +270,7 @@ export default function YearInReviewPage() {
                     <AnimatedNumber value={data.overview.uniqueRegions} duration={1500} />
                   </div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    蝴蝶活动覆盖的地理区域数量
+                    Number of geographic regions covered by butterfly activity
                   </p>
                 </CardContent>
               </Card>
@@ -282,7 +282,7 @@ export default function YearInReviewPage() {
                 <Card className="shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
                   <CardHeader>
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">平均存活天数</CardTitle>
+                      <CardTitle className="text-lg">Average Survival Days</CardTitle>
                       <Calendar className="w-6 h-6 text-red-600" />
                     </div>
                   </CardHeader>
@@ -294,7 +294,7 @@ export default function YearInReviewPage() {
                       />
                     </div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      所有蝴蝶的平均存活时间
+                      Average survival time for all butterflies
                     </p>
                   </CardContent>
                 </Card>
@@ -306,7 +306,7 @@ export default function YearInReviewPage() {
               <Card className="shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">总飞行距离</CardTitle>
+                    <CardTitle className="text-lg">Total Flight Distance</CardTitle>
                     <TrendingUp className="w-6 h-6 text-indigo-600" />
                   </div>
                 </CardHeader>
@@ -316,11 +316,11 @@ export default function YearInReviewPage() {
                       value={data.overview.totalFlightDistanceKm} 
                       duration={1500} 
                       decimals={1}
-                      suffix=" 公里"
+                      suffix=" km"
                     />
                   </div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    所有轨迹的总和
+                    Sum of all flight trajectories
                   </p>
                 </CardContent>
               </Card>
@@ -332,7 +332,7 @@ export default function YearInReviewPage() {
                 <Card className="shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 md:col-span-2 lg:col-span-1">
                   <CardHeader>
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">存活率</CardTitle>
+                      <CardTitle className="text-lg">Survival Rate</CardTitle>
                       <Award className="w-6 h-6 text-yellow-600" />
                     </div>
                   </CardHeader>
@@ -346,7 +346,7 @@ export default function YearInReviewPage() {
                       />
                     </div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      存活蝴蝶占总数的百分比
+                      Percentage of butterflies that survived
                     </p>
                   </CardContent>
                 </Card>
@@ -362,10 +362,10 @@ export default function YearInReviewPage() {
           <ScrollReveal direction="up" delay={0}>
             <div className="text-center mb-12">
               <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-                地理分布
+                Geographic Distribution
               </h2>
               <p className="text-lg text-gray-600 dark:text-gray-300">
-                查看 {year} 年所有蝴蝶的释放和目击地点分布
+                View the distribution of release and sighting locations for all butterflies in {year}
               </p>
             </div>
           </ScrollReveal>
@@ -373,9 +373,9 @@ export default function YearInReviewPage() {
           <ScrollReveal direction="up" delay={200}>
             <Card className="shadow-lg mb-6">
             <CardHeader>
-              <CardTitle>活动范围地图</CardTitle>
+              <CardTitle>Activity Range Map</CardTitle>
               <CardDescription>
-                红色标记：释放点 | 蓝色标记：目击点 | 橙色圆圈：最活跃释放地点 | 蓝色圆圈：最活跃目击地点
+                Red markers: Release points | Blue markers: Sighting points | Orange circles: Most active release location | Blue circles: Most active sighting location
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -394,7 +394,7 @@ export default function YearInReviewPage() {
             <Card className="shadow-lg">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">释放地点</CardTitle>
+                  <CardTitle className="text-lg">Release Locations</CardTitle>
                   <MapPin className="w-5 h-5 text-red-600" />
                 </div>
               </CardHeader>
@@ -403,16 +403,16 @@ export default function YearInReviewPage() {
                   {data.geographicDistribution.releaseLocations.length.toLocaleString()}
                 </div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  个释放地点
+                  release location(s)
                 </p>
                 {data.geographicDistribution.mostActiveReleaseLocation && (
                   <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">最活跃地点</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Most Active Location</p>
                     <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      {data.geographicDistribution.mostActiveReleaseLocation.address || "未知地点"}
+                      {data.geographicDistribution.mostActiveReleaseLocation.address || "Unknown Location"}
                     </p>
                     <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                      {data.geographicDistribution.mostActiveReleaseLocation.count} 次释放
+                      {data.geographicDistribution.mostActiveReleaseLocation.count} release(s)
                     </p>
                   </div>
                 )}
@@ -423,7 +423,7 @@ export default function YearInReviewPage() {
             <Card className="shadow-lg">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">目击地点</CardTitle>
+                  <CardTitle className="text-lg">Sighting Locations</CardTitle>
                   <Eye className="w-5 h-5 text-blue-600" />
                 </div>
               </CardHeader>
@@ -432,16 +432,16 @@ export default function YearInReviewPage() {
                   {data.geographicDistribution.sightingLocations.length.toLocaleString()}
                 </div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  个目击地点
+                  sighting location(s)
                 </p>
                 {data.geographicDistribution.mostActiveSightingLocation && (
                   <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">最活跃地点</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Most Active Location</p>
                     <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      {data.geographicDistribution.mostActiveSightingLocation.address || "未知地点"}
+                      {data.geographicDistribution.mostActiveSightingLocation.address || "Unknown Location"}
                     </p>
                     <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                      {data.geographicDistribution.mostActiveSightingLocation.count} 次目击
+                      {data.geographicDistribution.mostActiveSightingLocation.count} sighting(s)
                     </p>
                   </div>
                 )}
@@ -455,30 +455,30 @@ export default function YearInReviewPage() {
             <ScrollReveal direction="up" delay={600}>
             <Card className="shadow-lg mt-6">
               <CardHeader>
-                <CardTitle className="text-lg">活动范围</CardTitle>
+                <CardTitle className="text-lg">Activity Range</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div>
-                    <p className="text-gray-600 dark:text-gray-400 mb-1">最北纬度</p>
+                    <p className="text-gray-600 dark:text-gray-400 mb-1">Northernmost Latitude</p>
                     <p className="font-mono font-semibold text-gray-900 dark:text-white">
                       {data.geographicDistribution.bounds.maxLatitude.toFixed(4)}°
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-600 dark:text-gray-400 mb-1">最南纬度</p>
+                    <p className="text-gray-600 dark:text-gray-400 mb-1">Southernmost Latitude</p>
                     <p className="font-mono font-semibold text-gray-900 dark:text-white">
                       {data.geographicDistribution.bounds.minLatitude.toFixed(4)}°
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-600 dark:text-gray-400 mb-1">最东经度</p>
+                    <p className="text-gray-600 dark:text-gray-400 mb-1">Easternmost Longitude</p>
                     <p className="font-mono font-semibold text-gray-900 dark:text-white">
                       {data.geographicDistribution.bounds.maxLongitude.toFixed(4)}°
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-600 dark:text-gray-400 mb-1">最西经度</p>
+                    <p className="text-gray-600 dark:text-gray-400 mb-1">Westernmost Longitude</p>
                     <p className="font-mono font-semibold text-gray-900 dark:text-white">
                       {data.geographicDistribution.bounds.minLongitude.toFixed(4)}°
                     </p>
@@ -496,16 +496,16 @@ export default function YearInReviewPage() {
         <ScrollReveal direction="fade" delay={200}>
           <div className="container mx-auto max-w-6xl text-center">
             <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-              感谢所有志愿者的贡献
+              Thank You to All Volunteers
             </h2>
             <p className="text-lg text-gray-600 dark:text-gray-300 mb-8">
-              让我们一起期待 {year + 1} 年更多的精彩数据
+              Let's look forward to more amazing data in {year + 1}
             </p>
             <div className="flex gap-4 justify-center">
               <Link href="/search">
                 <Button variant="outline" className="transition-transform hover:scale-105">
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  返回搜索
+                  Back to Search
                 </Button>
               </Link>
               <Button
@@ -514,7 +514,7 @@ export default function YearInReviewPage() {
                 }}
                 className="transition-transform hover:scale-105"
               >
-                返回顶部
+                Back to Top
               </Button>
             </div>
           </div>

@@ -1,9 +1,12 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import L from "leaflet";
 import { LatLngExpression } from "leaflet";
+
+// Global counter to ensure unique map IDs
+let mapCounter = 0;
 
 // Dynamically import MapContainer to avoid SSR issues
 const MapContainer = dynamic(
@@ -55,7 +58,42 @@ export default function ButterflyMap({
   sightingPoints = [],
   className = "h-[600px] w-full"
 }: ButterflyMapProps) {
-  const mapRef = useRef<L.Map | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+  const [shouldRenderMap, setShouldRenderMap] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
+  const mapIdRef = useRef<string>(`butterfly-map-${++mapCounter}-${Date.now()}`);
+
+  // Ensure component is mounted on client side and generate unique ID
+  useEffect(() => {
+    // Wait for next tick to ensure DOM is ready
+    const timer = setTimeout(() => {
+      setIsMounted(true);
+      // Generate a unique ID for this map instance using global counter
+      mapIdRef.current = `butterfly-map-${++mapCounter}-${Date.now()}`;
+      // Delay map rendering slightly to avoid race conditions with React strict mode
+      const renderTimer = setTimeout(() => {
+        setShouldRenderMap(true);
+      }, 150);
+      
+      return () => {
+        clearTimeout(renderTimer);
+      };
+    }, 0);
+    
+    return () => {
+      clearTimeout(timer);
+      // Cleanup: remove any existing map instance
+      if (mapInstanceRef.current) {
+        try {
+          mapInstanceRef.current.remove();
+        } catch (e) {
+          // Ignore errors during cleanup
+        }
+        mapInstanceRef.current = null;
+      }
+    };
+  }, []);
 
   // Calculate center point
   const getCenter = (): LatLngExpression => {
@@ -98,13 +136,32 @@ export default function ButterflyMap({
   const bounds = getBounds();
   const polylinePath = getPolylinePath();
 
+  // Don't render map until component is mounted and ready
+  if (!isMounted || !shouldRenderMap) {
+    return (
+      <div className={className} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="text-gray-500">Loading map...</div>
+      </div>
+    );
+  }
+
   return (
-    <div className={className}>
+    <div 
+      ref={containerRef}
+      id={mapIdRef.current}
+      className={className}
+      style={{ position: 'relative' }}
+    >
       <MapContainer
+        key={mapIdRef.current}
         center={center}
         zoom={releasePoint || sightingPoints.length > 0 ? 10 : 5}
         style={{ height: "100%", width: "100%", zIndex: 0 }}
         scrollWheelZoom={true}
+        whenCreated={(map) => {
+          // Store map instance reference
+          mapInstanceRef.current = map;
+        }}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -126,13 +183,13 @@ export default function ButterflyMap({
           >
             <Popup>
               <div className="p-2">
-                <h3 className="font-bold text-red-600 mb-1">释放点</h3>
+                <h3 className="font-bold text-red-600 mb-1">Release Point</h3>
                 <p className="text-sm">{releasePoint.label}</p>
                 {releasePoint.description && (
                   <p className="text-xs text-gray-600 mt-1">{releasePoint.description}</p>
                 )}
                 {releasePoint.date && (
-                  <p className="text-xs text-gray-500 mt-1">日期: {releasePoint.date}</p>
+                  <p className="text-xs text-gray-500 mt-1">Date: {releasePoint.date}</p>
                 )}
               </div>
             </Popup>
@@ -155,13 +212,13 @@ export default function ButterflyMap({
           >
             <Popup>
               <div className="p-2">
-                <h3 className="font-bold text-blue-600 mb-1">目击点 #{index + 1}</h3>
+                <h3 className="font-bold text-blue-600 mb-1">Sighting Point #{index + 1}</h3>
                 <p className="text-sm">{point.label}</p>
                 {point.description && (
                   <p className="text-xs text-gray-600 mt-1">{point.description}</p>
                 )}
                 {point.date && (
-                  <p className="text-xs text-gray-500 mt-1">日期: {point.date}</p>
+                  <p className="text-xs text-gray-500 mt-1">Date: {point.date}</p>
                 )}
               </div>
             </Popup>
