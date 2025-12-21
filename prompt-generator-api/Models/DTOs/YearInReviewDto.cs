@@ -16,24 +16,9 @@ public class YearInReviewDto
     public OverviewStatisticsDto Overview { get; set; } = new();
 
     /// <summary>
-    /// Monthly statistics
-    /// </summary>
-    public List<MonthlyStatisticsDto> MonthlyStats { get; set; } = new();
-
-    /// <summary>
     /// Geographic distribution data
     /// </summary>
     public GeographicDistributionDto GeographicDistribution { get; set; } = new();
-
-    /// <summary>
-    /// Top contributors (volunteers)
-    /// </summary>
-    public List<ContributorDto> TopContributors { get; set; } = new();
-
-    /// <summary>
-    /// Achievement highlights
-    /// </summary>
-    public AchievementsDto Achievements { get; set; } = new();
 }
 
 /// <summary>
@@ -75,37 +60,6 @@ public class OverviewStatisticsDto
     /// Survival rate percentage (alive butterflies / total released)
     /// </summary>
     public double? SurvivalRate { get; set; }
-}
-
-/// <summary>
-/// Monthly statistics
-/// </summary>
-public class MonthlyStatisticsDto
-{
-    /// <summary>
-    /// Month number (1-12)
-    /// </summary>
-    public int Month { get; set; }
-
-    /// <summary>
-    /// Month name (e.g., "January", "February")
-    /// </summary>
-    public string MonthName { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Number of releases in this month
-    /// </summary>
-    public int Releases { get; set; }
-
-    /// <summary>
-    /// Number of sightings in this month
-    /// </summary>
-    public int Sightings { get; set; }
-
-    /// <summary>
-    /// Number of unique tag numbers sighted in this month
-    /// </summary>
-    public int UniqueTagNumbersSighted { get; set; }
 }
 
 /// <summary>
@@ -170,106 +124,5 @@ public class GeographicBoundsDto
     public double MaxLatitude { get; set; }
     public double MinLongitude { get; set; }
     public double MaxLongitude { get; set; }
-}
-
-/// <summary>
-/// Contributor (volunteer) information
-/// </summary>
-public class ContributorDto
-{
-    /// <summary>
-    /// Email address (may be masked for privacy)
-    /// </summary>
-    public string Email { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Number of sightings reported by this volunteer
-    /// </summary>
-    public int SightingCount { get; set; }
-
-    /// <summary>
-    /// Number of unique tag numbers reported by this volunteer
-    /// </summary>
-    public int UniqueTagNumbersReported { get; set; }
-
-    /// <summary>
-    /// Rank in the leaderboard (1-based)
-    /// </summary>
-    public int Rank { get; set; }
-}
-
-/// <summary>
-/// Achievement highlights
-/// </summary>
-public class AchievementsDto
-{
-    /// <summary>
-    /// Longest flight distance record
-    /// </summary>
-    public FlightRecordDto? LongestFlight { get; set; }
-
-    /// <summary>
-    /// Longest survival record
-    /// </summary>
-    public SurvivalRecordDto? LongestSurvival { get; set; }
-
-    /// <summary>
-    /// Most sighted butterfly
-    /// </summary>
-    public MostSightedDto? MostSighted { get; set; }
-
-    /// <summary>
-    /// Farthest sighting from release point
-    /// </summary>
-    public FarthestSightingDto? FarthestSighting { get; set; }
-}
-
-/// <summary>
-/// Flight distance record
-/// </summary>
-public class FlightRecordDto
-{
-    public string TagNumber { get; set; } = string.Empty;
-    public double TotalDistanceKm { get; set; }
-    public int SightingCount { get; set; }
-    public int? SurvivalDays { get; set; }
-    public DateTime? ReleaseDate { get; set; }
-    public DateTime? LastSightingDate { get; set; }
-}
-
-/// <summary>
-/// Survival record
-/// </summary>
-public class SurvivalRecordDto
-{
-    public string TagNumber { get; set; } = string.Empty;
-    public int SurvivalDays { get; set; }
-    public DateTime? ReleaseDate { get; set; }
-    public DateTime? LastSightingDate { get; set; }
-    public string? Status { get; set; }
-}
-
-/// <summary>
-/// Most sighted butterfly
-/// </summary>
-public class MostSightedDto
-{
-    public string TagNumber { get; set; } = string.Empty;
-    public int SightingCount { get; set; }
-    public DateTime? ReleaseDate { get; set; }
-    public DateTime? FirstSightingDate { get; set; }
-    public DateTime? LastSightingDate { get; set; }
-}
-
-/// <summary>
-/// Farthest sighting from release point
-/// </summary>
-public class FarthestSightingDto
-{
-    public string TagNumber { get; set; } = string.Empty;
-    public double DistanceKm { get; set; }
-    public LocationPointDto? ReleaseLocation { get; set; }
-    public LocationPointDto? SightingLocation { get; set; }
-    public DateTime? SightingDate { get; set; }
 }
 
