@@ -3,7 +3,8 @@ import {
   ReleaseSubmission,
   SightingSubmission,
   ApiResponse,
-  TagNumberSummary
+  TagNumberSummary,
+  YearInReview
 } from '@/types/butterfly';
 import {
   getButterflyStatus,
@@ -233,6 +234,28 @@ export const butterflyService = {
       };
     } catch (error) {
       console.error('Error getting trajectory by tag number:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get year in review data for a specific year
+   * @param year Year to get report for (e.g., 2024)
+   * @returns Year in review data
+   */
+  async getYearInReview(year: number): Promise<YearInReview> {
+    try {
+      const response = await axiosInstance.get<ApiResponse<YearInReview>>(
+        `/api/YearInReview/${year}`
+      );
+
+      if (response.data.code !== 0 || !response.data.data) {
+        throw new Error(response.data.message || 'Failed to get year in review data');
+      }
+
+      return response.data.data;
+    } catch (error) {
+      console.error('Error getting year in review:', error);
       throw error;
     }
   }
