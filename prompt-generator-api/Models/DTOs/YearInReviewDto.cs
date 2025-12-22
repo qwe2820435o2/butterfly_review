@@ -19,6 +19,67 @@ public class YearInReviewDto
     /// Geographic distribution data
     /// </summary>
     public GeographicDistributionDto GeographicDistribution { get; set; } = new();
+
+    // Flattened properties for backward compatibility
+    /// <summary>
+    /// Total number of butterflies released
+    /// </summary>
+    public int TotalReleases { get; set; }
+
+    /// <summary>
+    /// Total number of sightings
+    /// </summary>
+    public int TotalSightings { get; set; }
+
+    /// <summary>
+    /// Number of unique volunteers (by email)
+    /// </summary>
+    public int UniqueVolunteers { get; set; }
+
+    /// <summary>
+    /// Number of unique geographic regions covered
+    /// </summary>
+    public int UniqueRegions { get; set; }
+
+    /// <summary>
+    /// Total flight distance in kilometers (sum of all trajectories)
+    /// </summary>
+    public double TotalFlightDistanceKm { get; set; }
+
+    /// <summary>
+    /// Average days to first sighting
+    /// </summary>
+    public double? AverageDaysToFirstSighting { get; set; }
+
+    /// <summary>
+    /// Count of release locations
+    /// </summary>
+    public int ReleaseLocationsCount { get; set; }
+
+    /// <summary>
+    /// Count of sighting locations
+    /// </summary>
+    public int SightingLocationsCount { get; set; }
+
+    /// <summary>
+    /// Address of the most active release location
+    /// </summary>
+    public string? MostActiveReleaseLocationAddress { get; set; }
+
+    /// <summary>
+    /// Count of releases at the most active release location
+    /// </summary>
+    public int MostActiveReleaseLocationCount { get; set; }
+
+    /// <summary>
+    /// Address of the most active sighting location
+    /// </summary>
+    public string? MostActiveSightingLocationAddress { get; set; }
+
+    /// <summary>
+    /// Count of sightings at the most active sighting location
+    /// </summary>
+    public int MostActiveSightingLocationCount { get; set; }
 }
 
 /// <summary>
@@ -60,6 +121,41 @@ public class OverviewStatisticsDto
     /// Survival rate percentage (alive butterflies / total released)
     /// </summary>
     public double? SurvivalRate { get; set; }
+
+    /// <summary>
+    /// Average days to first sighting
+    /// </summary>
+    public double? AverageDaysToFirstSighting { get; set; }
+
+    /// <summary>
+    /// Count of release locations
+    /// </summary>
+    public int ReleaseLocationsCount { get; set; }
+
+    /// <summary>
+    /// Count of sighting locations
+    /// </summary>
+    public int SightingLocationsCount { get; set; }
+
+    /// <summary>
+    /// Address of the most active release location
+    /// </summary>
+    public string? MostActiveReleaseLocationAddress { get; set; }
+
+    /// <summary>
+    /// Count of releases at the most active release location
+    /// </summary>
+    public int MostActiveReleaseLocationCount { get; set; }
+
+    /// <summary>
+    /// Address of the most active sighting location
+    /// </summary>
+    public string? MostActiveSightingLocationAddress { get; set; }
+
+    /// <summary>
+    /// Count of sightings at the most active sighting location
+    /// </summary>
+    public int MostActiveSightingLocationCount { get; set; }
 }
 
 /// <summary>
