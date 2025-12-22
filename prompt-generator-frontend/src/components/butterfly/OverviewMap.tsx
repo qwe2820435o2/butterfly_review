@@ -62,12 +62,34 @@ const defaultCenter = {
  * Overview Map Component
  * Displays multiple trajectories on a single map with color coding
  */
+// Helper function to group points by location (with tolerance for floating point precision)
+const groupPointsByLocation = (points: TrajectoryPoint[], tolerance: number = 0.0001) => {
+  const groups: Map<string, TrajectoryPoint[]> = new Map();
+  
+  points.forEach(point => {
+    // Round coordinates to create location key
+    const latKey = Math.round(point.lat / tolerance) * tolerance;
+    const lngKey = Math.round(point.lng / tolerance) * tolerance;
+    const locationKey = `${latKey.toFixed(6)},${lngKey.toFixed(6)}`;
+    
+    if (!groups.has(locationKey)) {
+      groups.set(locationKey, []);
+    }
+    groups.get(locationKey)!.push(point);
+  });
+  
+  return groups;
+};
+
 export default function OverviewMap({
   trajectories = [],
   className = "h-[600px] w-full",
   apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "AIzaSyAl3nBJPlQzHAje4DbjISunBDuoVU6P2ZE"
 }: OverviewMapProps) {
-  const [selectedPoint, setSelectedPoint] = useState<TrajectoryPoint | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<{
+    position: { lat: number; lng: number };
+    points: TrajectoryPoint[];
+  } | null>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
 
   // Load Google Maps script
@@ -146,8 +168,28 @@ export default function OverviewMap({
     }
   }, [bounds]);
 
-  // Create marker icon based on type
-  const createMarkerIcon = useCallback((type: "release" | "sighting", color: string) => {
+  // Collect all points and group by location
+  const allPointsByLocation = useMemo(() => {
+    const allPoints: TrajectoryPoint[] = [];
+    
+    trajectories.forEach(trajectory => {
+      if (trajectory.releasePoint && trajectory.releasePoint.tagNumber === trajectory.tagNumber) {
+        allPoints.push(trajectory.releasePoint);
+      }
+      trajectory.sightingPoints
+        .filter(point => point.tagNumber === trajectory.tagNumber)
+        .forEach(point => allPoints.push(point));
+    });
+    
+    return groupPointsByLocation(allPoints);
+  }, [trajectories]);
+
+  // Create marker icon based on type and count
+  const createMarkerIcon = useCallback((
+    type: "release" | "sighting", 
+    color: string,
+    count: number = 1
+  ) => {
     if (!isLoaded || typeof google === 'undefined') return undefined;
     
     // Use different icons for release (red) and sighting (blue)
@@ -155,9 +197,12 @@ export default function OverviewMap({
       ? "https://maps.google.com/mapfiles/ms/icons/red-dot.png"
       : "https://maps.google.com/mapfiles/ms/icons/blue-dot.png";
     
+    // If multiple points at same location, make marker slightly larger
+    const size = count > 1 ? 45 : 40;
+    
     return {
       url: iconUrl,
-      scaledSize: new google.maps.Size(40, 40),
+      scaledSize: new google.maps.Size(size, size),
     };
   }, [isLoaded]);
 
@@ -269,29 +314,6 @@ export default function OverviewMap({
 
           return (
             <React.Fragment key={trajectory.tagNumber}>
-              {/* Release Point Marker - Only for this tagNumber */}
-              {trajectory.releasePoint && trajectory.releasePoint.tagNumber === trajectory.tagNumber && (
-                <Marker
-                  position={{ lat: trajectory.releasePoint.lat, lng: trajectory.releasePoint.lng }}
-                  icon={createMarkerIcon("release", trajectory.color)}
-                  onClick={() => setSelectedPoint(trajectory.releasePoint!)}
-                  title={`${trajectory.tagNumber} - Release`}
-                />
-              )}
-
-              {/* Sighting Points Markers - Only for this tagNumber */}
-              {trajectory.sightingPoints
-                .filter(point => point.tagNumber === trajectory.tagNumber)
-                .map((point, index) => (
-                  <Marker
-                    key={`${trajectory.tagNumber}-sighting-${index}`}
-                    position={{ lat: point.lat, lng: point.lng }}
-                    icon={createMarkerIcon("sighting", trajectory.color)}
-                    onClick={() => setSelectedPoint(point)}
-                    title={`${trajectory.tagNumber} - Sighting ${index + 1}`}
-                  />
-                ))}
-
               {/* Trajectory Polyline - Only connects points of the same tagNumber */}
               {shouldRenderPolyline && createPolylineOptions(trajectory.color) && (
                 <Polyline
@@ -304,24 +326,102 @@ export default function OverviewMap({
           );
         })}
 
-        {/* Info Window */}
-        {selectedPoint && (
+        {/* Render markers grouped by location with count labels */}
+        {Array.from(allPointsByLocation.entries()).map(([locationKey, points]) => {
+          const basePosition = {
+            lat: parseFloat(locationKey.split(',')[0]),
+            lng: parseFloat(locationKey.split(',')[1])
+          };
+          
+          // Separate release and sighting points
+          const releasePoints = points.filter(p => p.type === "release");
+          const sightingPoints = points.filter(p => p.type === "sighting");
+          
+          // Show release point first (if exists), then sighting points
+          // Only show one marker per location type, but with count label
+          return (
+            <React.Fragment key={locationKey}>
+              {/* Release Point Marker - Show count if multiple points */}
+              {releasePoints.length > 0 && (
+                <Marker
+                  key={`release-${locationKey}`}
+                  position={basePosition}
+                  icon={createMarkerIcon("release", "", points.length)}
+                  onClick={() => setSelectedLocation({ position: basePosition, points })}
+                  title={`${releasePoints.length} Release Point(s)${points.length > releasePoints.length ? `, ${points.length - releasePoints.length} Sighting(s)` : ''} - ${points.length} total`}
+                  label={points.length > 1 ? {
+                    text: points.length.toString(),
+                    color: "white",
+                    fontSize: "14px",
+                    fontWeight: "bold",
+                  } : undefined}
+                />
+              )}
+              
+              {/* Sighting Points Marker - Only show if no release points, or show separately */}
+              {releasePoints.length === 0 && sightingPoints.length > 0 && (
+                <Marker
+                  key={`sighting-${locationKey}`}
+                  position={basePosition}
+                  icon={createMarkerIcon("sighting", "", points.length)}
+                  onClick={() => setSelectedLocation({ position: basePosition, points })}
+                  title={`${sightingPoints.length} Sighting Point(s)`}
+                  label={points.length > 1 ? {
+                    text: points.length.toString(),
+                    color: "white",
+                    fontSize: "14px",
+                    fontWeight: "bold",
+                  } : undefined}
+                />
+              )}
+            </React.Fragment>
+          );
+        })}
+
+        {/* Info Window - Show all points at selected location */}
+        {selectedLocation && (
           <InfoWindow
-            position={{ lat: selectedPoint.lat, lng: selectedPoint.lng }}
-            onCloseClick={() => setSelectedPoint(null)}
+            position={selectedLocation.position}
+            onCloseClick={() => setSelectedLocation(null)}
           >
-            <div className="p-2 min-w-[200px]">
-              <h3 className={`font-bold mb-2 ${selectedPoint.type === "release" ? "text-red-600" : "text-blue-600"}`}>
-                {selectedPoint.type === "release" ? "Release Point" : "Sighting Point"}
+            <div className="p-3 min-w-[250px] max-w-[400px] max-h-[400px] overflow-y-auto">
+              <h3 className="font-bold mb-3 text-lg">
+                {selectedLocation.points.length > 1 
+                  ? `${selectedLocation.points.length} Points at This Location`
+                  : selectedLocation.points[0]?.type === "release" ? "Release Point" : "Sighting Point"}
               </h3>
-              <p className="text-sm font-semibold mb-1">Tag: {selectedPoint.tagNumber}</p>
-              <p className="text-sm font-semibold mb-1">{selectedPoint.label}</p>
-              {selectedPoint.description && (
-                <p className="text-xs text-gray-600 mb-1">{selectedPoint.description}</p>
-              )}
-              {selectedPoint.date && (
-                <p className="text-xs text-gray-500">Date: {selectedPoint.date}</p>
-              )}
+              
+              <div className="space-y-3">
+                {selectedLocation.points.map((point, index) => (
+                  <div 
+                    key={`${point.tagNumber}-${point.type}-${index}`}
+                    className={`p-2 rounded border-l-4 ${
+                      point.type === "release" ? "border-red-500 bg-red-50" : "border-blue-500 bg-blue-50"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <p className={`font-semibold text-sm ${
+                          point.type === "release" ? "text-red-600" : "text-blue-600"
+                        }`}>
+                          {point.type === "release" ? "Release" : "Sighting"} - {point.tagNumber}
+                        </p>
+                        <p className="text-xs text-gray-700 mt-1">{point.label}</p>
+                        {point.description && (
+                          <p className="text-xs text-gray-600 mt-1">{point.description}</p>
+                        )}
+                        {point.date && (
+                          <p className="text-xs text-gray-500 mt-1">Date: {point.date}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <p className="text-xs text-gray-400 mt-3">
+                Coordinates: {selectedLocation.position.lat.toFixed(6)}, {selectedLocation.position.lng.toFixed(6)}
+              </p>
             </div>
           </InfoWindow>
         )}
