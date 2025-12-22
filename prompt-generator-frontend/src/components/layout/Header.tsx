@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Search, BarChart3 } from "lucide-react";
+import { Sparkles, Search, BarChart3, MapPin } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@/components/common/ThemeToggle";
 
@@ -35,6 +35,19 @@ export default function Header() {
                                 >
                                     <Search className="w-4 h-4 mr-2" />
                                     Search
+                                </Button>
+                            </Link>
+                            <Link href="/map/overview">
+                                <Button
+                                    variant={pathname === "/map/overview" ? "default" : "ghost"}
+                                    className={`px-6 py-2 text-base font-medium transition-all
+                                        ${pathname === "/map/overview" 
+                                            ? "bg-orange-600 hover:bg-orange-700 dark:bg-orange-500 dark:hover:bg-orange-600 text-white" 
+                                            : "text-gray-700 dark:text-gray-300 hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:text-orange-700 dark:hover:text-orange-400"
+                                        }`}
+                                >
+                                    <MapPin className="w-4 h-4 mr-2" />
+                                    Overview
                                 </Button>
                             </Link>
                             <Link href={`/year-in-review/${new Date().getFullYear()}`}>

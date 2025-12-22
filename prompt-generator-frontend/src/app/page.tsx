@@ -83,11 +83,11 @@ export default function HomePage() {
               </CardHeader>
               <CardContent>
                 <CardDescription className="text-base text-gray-600 dark:text-gray-300 mb-4">
-                  Visualize the complete flight path of a butterfly on an interactive map. See release points, sighting locations, and calculate flight distance.
+                  View all butterfly tag trajectories on a single interactive map. See release points, sighting locations, and flight paths for all tagNumbers.
                 </CardDescription>
-                <Link href="/search">
+                <Link href="/map/overview">
                   <Button variant="outline" className="w-full border-2 border-blue-600 dark:border-blue-500 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20">
-                    Find Your Tag
+                    View All Trajectories
                   </Button>
                 </Link>
               </CardContent>

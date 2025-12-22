@@ -16,12 +16,7 @@ import { butterflyService } from "@/services/butterflyService";
 const OverviewMap = dynamic(
   () => import("@/components/butterfly/OverviewMap"),
   { 
-    ssr: false,
-    loading: () => (
-      <div className="h-[600px] w-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg">
-        <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
-      </div>
-    )
+    ssr: false
   }
 );
 
@@ -145,10 +140,19 @@ export default function MapOverviewPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <OverviewMap
-              trajectories={trajectories}
-              className="h-[600px] w-full rounded-lg"
-            />
+            {trajectories.length > 0 ? (
+              <OverviewMap
+                trajectories={trajectories}
+                className="h-[600px] w-full rounded-lg"
+              />
+            ) : (
+              <div className="h-[600px] w-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg">
+                <div className="text-center">
+                  <Loader2 className="w-8 h-8 animate-spin text-orange-600 mx-auto mb-2" />
+                  <p className="text-gray-500 dark:text-gray-400">Loading map...</p>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
