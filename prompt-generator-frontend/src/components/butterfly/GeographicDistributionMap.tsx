@@ -1,10 +1,13 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import dynamic from "next/dynamic";
 import L from "leaflet";
 import { LatLngExpression, LatLngBounds } from "leaflet";
 import { GeographicDistribution, LocationPoint } from "@/types/butterfly";
+
+// Global counter to ensure unique map IDs
+let geoMapCounter = 0;
 
 // Dynamically import MapContainer to avoid SSR issues
 const MapContainer = dynamic(
@@ -51,18 +54,50 @@ export default function GeographicDistributionMap({
   className = "h-[600px] w-full"
 }: GeographicDistributionMapProps) {
   const [isMounted, setIsMounted] = useState(false);
-  const [mapKey, setMapKey] = useState(0);
+  const [shouldRenderMap, setShouldRenderMap] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
+  const mapIdRef = useRef<string>(`geo-map-${++geoMapCounter}-${Date.now()}`);
 
-  // Ensure component is mounted on client side
+  // Ensure component is mounted on client side and generate unique ID
   useEffect(() => {
-    setIsMounted(true);
-    // Generate a unique key to force remount when data changes
+    // Wait for next tick to ensure DOM is ready
+    const timer = setTimeout(() => {
+      setIsMounted(true);
+      // Generate a unique ID for this map instance using global counter
+      mapIdRef.current = `geo-map-${++geoMapCounter}-${Date.now()}`;
+      // Delay map rendering slightly to avoid race conditions with React strict mode
+      const renderTimer = setTimeout(() => {
+        setShouldRenderMap(true);
+      }, 150);
+      
+      return () => {
+        clearTimeout(renderTimer);
+      };
+    }, 0);
+    
+    return () => {
+      clearTimeout(timer);
+      // Cleanup: remove any existing map instance
+      if (mapInstanceRef.current) {
+        try {
+          mapInstanceRef.current.remove();
+        } catch (e) {
+          // Ignore errors during cleanup
+        }
+        mapInstanceRef.current = null;
+      }
+    };
+  }, []);
+  
+  // Generate unique key when geographicDistribution changes
+  const mapKey = useMemo(() => {
     const releaseCount = geographicDistribution.releaseLocations.length;
     const sightingCount = geographicDistribution.sightingLocations.length;
     const boundsKey = geographicDistribution.bounds
       ? `${geographicDistribution.bounds.minLatitude}-${geographicDistribution.bounds.maxLatitude}-${geographicDistribution.bounds.minLongitude}-${geographicDistribution.bounds.maxLongitude}`
       : 'no-bounds';
-    setMapKey(Date.now());
+    return `${mapIdRef.current}-${releaseCount}-${sightingCount}-${boundsKey}`;
   }, [geographicDistribution]);
 
   // Calculate center point from bounds or locations
@@ -161,8 +196,8 @@ export default function GeographicDistributionMap({
     }
   };
 
-  // Don't render map until component is mounted
-  if (!isMounted) {
+  // Don't render map until component is mounted and ready
+  if (!isMounted || !shouldRenderMap) {
     return (
       <div className={className} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div className="text-gray-500">Loading map...</div>
@@ -171,15 +206,24 @@ export default function GeographicDistributionMap({
   }
 
   return (
-    <div className={className} key={`geo-map-wrapper-${mapKey}`}>
+    <div 
+      ref={containerRef}
+      id={mapIdRef.current}
+      className={className}
+      style={{ position: 'relative' }}
+    >
       <MapContainer
-        key={`geo-map-${mapKey}`}
+        key={mapKey}
         center={center}
         zoom={zoom}
         style={{ height: "100%", width: "100%", zIndex: 0 }}
         scrollWheelZoom={true}
         bounds={bounds || undefined}
         boundsOptions={{ padding: [50, 50] }}
+        whenCreated={(map) => {
+          // Store map instance reference
+          mapInstanceRef.current = map;
+        }}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

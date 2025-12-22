@@ -230,22 +230,22 @@ export const getStatusDisplay = (status: 'Alive' | 'Dead' | 'Unknown'): {
 };
 
 /**
- * Year in Review Types
+ * Year in Review Types (flattened structure)
  */
 export interface YearInReview {
   year: number;
-  overview: OverviewStatistics;
-  geographicDistribution: GeographicDistribution;
-}
-
-export interface OverviewStatistics {
   totalReleases: number;
   totalSightings: number;
   uniqueVolunteers: number;
   uniqueRegions: number;
-  averageSurvivalDays?: number;
   totalFlightDistanceKm: number;
-  survivalRate?: number;
+  averageDaysToFirstSighting?: number;
+  releaseLocationsCount: number;
+  sightingLocationsCount: number;
+  mostActiveReleaseLocationAddress?: string;
+  mostActiveReleaseLocationCount: number;
+  mostActiveSightingLocationAddress?: string;
+  mostActiveSightingLocationCount: number;
 }
 
 export interface GeographicDistribution {

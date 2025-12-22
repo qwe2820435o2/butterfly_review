@@ -48,12 +48,28 @@ public class YearInReviewController : ControllerBase
             var releases = await _releaseRepository.GetByCreatedRangeAsync(startDate, endDate);
             var sightings = await _sightingRepository.GetByCreatedRangeAsync(startDate, endDate);
 
-            // Build the year in review DTO
+            // Calculate geographic distribution first (needed for statistics)
+            var geographicDistribution = CalculateGeographicDistribution(releases, sightings);
+
+            // Calculate all statistics
+            var statistics = CalculateOverviewStatistics(releases, sightings, geographicDistribution);
+
+            // Build the flattened year in review DTO
             var yearInReview = new YearInReviewDto
             {
                 Year = year,
-                Overview = CalculateOverviewStatistics(releases, sightings),
-                GeographicDistribution = CalculateGeographicDistribution(releases, sightings)
+                TotalReleases = statistics.TotalReleases,
+                TotalSightings = statistics.TotalSightings,
+                UniqueVolunteers = statistics.UniqueVolunteers,
+                UniqueRegions = statistics.UniqueRegions,
+                TotalFlightDistanceKm = statistics.TotalFlightDistanceKm,
+                AverageDaysToFirstSighting = statistics.AverageDaysToFirstSighting,
+                ReleaseLocationsCount = statistics.ReleaseLocationsCount,
+                SightingLocationsCount = statistics.SightingLocationsCount,
+                MostActiveReleaseLocationAddress = statistics.MostActiveReleaseLocationAddress,
+                MostActiveReleaseLocationCount = statistics.MostActiveReleaseLocationCount,
+                MostActiveSightingLocationAddress = statistics.MostActiveSightingLocationAddress,
+                MostActiveSightingLocationCount = statistics.MostActiveSightingLocationCount
             };
 
             return Ok(ApiResponseHelper.Success(yearInReview, $"Year {year} in review data generated successfully"));
@@ -65,15 +81,15 @@ public class YearInReviewController : ControllerBase
     }
 
     /// <summary>
-    /// Calculate overview statistics
+    /// Calculate overview statistics (internal helper, returns flattened structure)
     /// </summary>
     private OverviewStatisticsDto CalculateOverviewStatistics(
         IReadOnlyList<Models.Entities.ReleaseSubmission> releases,
-        IReadOnlyList<Models.Entities.SightingSubmission> sightings)
+        IReadOnlyList<Models.Entities.SightingSubmission> sightings,
+        GeographicDistributionDto geographicDistribution)
     {
         var uniqueVolunteers = new HashSet<string>();
         var uniqueRegions = new HashSet<string>();
-        var survivalDaysList = new List<int>();
         var totalDistance = 0.0;
 
         // Process releases
@@ -104,29 +120,35 @@ public class YearInReviewController : ControllerBase
             }
         }
 
-        // Calculate survival days and distances for each tag number
-        var tagNumbers = releases.Select(r => r.TagNumber).Distinct().ToList();
-        foreach (var tagNumber in tagNumbers)
+        // Use already validated locations from GeographicDistribution
+        var validSightingLocations = geographicDistribution.SightingLocations;
+
+        // Calculate distances and days to first sighting for each tag number
+        var uniqueTagNumbers = releases.Select(r => r.TagNumber).Distinct().ToHashSet();
+        var daysToFirstSightingList = new List<int>();
+        
+        foreach (var tagNumber in uniqueTagNumbers)
         {
             var tagReleases = releases.Where(r => r.TagNumber == tagNumber).ToList();
             var tagSightings = sightings.Where(s => s.TagNumber == tagNumber)
                 .OrderBy(s => s.SightingDateTimeUtc ?? DateTime.MinValue)
                 .ToList();
 
+            // Calculate days to first sighting
             if (tagReleases.Count > 0 && tagSightings.Count > 0)
             {
                 var latestRelease = tagReleases
                     .OrderByDescending(r => r.ReleaseDateTimeUtc ?? DateTime.MinValue)
                     .First();
 
-                var lastSighting = tagSightings.Last();
+                var firstSighting = tagSightings.First();
 
-                if (latestRelease.ReleaseDateTimeUtc.HasValue && lastSighting.SightingDateTimeUtc.HasValue)
+                if (latestRelease.ReleaseDateTimeUtc.HasValue && firstSighting.SightingDateTimeUtc.HasValue)
                 {
-                    var days = (int)(lastSighting.SightingDateTimeUtc.Value - latestRelease.ReleaseDateTimeUtc.Value).TotalDays;
-                    if (days > 0)
+                    var days = (int)(firstSighting.SightingDateTimeUtc.Value - latestRelease.ReleaseDateTimeUtc.Value).TotalDays;
+                    if (days >= 0)
                     {
-                        survivalDaysList.Add(days);
+                        daysToFirstSightingList.Add(days);
                     }
                 }
 
@@ -137,11 +159,14 @@ public class YearInReviewController : ControllerBase
                     {
                         if (sighting.Latitude.HasValue && sighting.Longitude.HasValue)
                         {
+                            var lat = sighting.Latitude.Value;
+                            var lng = sighting.Longitude.Value;
+
                             var distance = CalculateHaversineDistance(
                                 latestRelease.Latitude.Value,
                                 latestRelease.Longitude.Value,
-                                sighting.Latitude.Value,
-                                sighting.Longitude.Value);
+                                lat,
+                                lng);
                             totalDistance += distance;
                         }
                     }
@@ -149,11 +174,10 @@ public class YearInReviewController : ControllerBase
             }
         }
 
-        // Calculate survival rate
-        var aliveCount = sightings.Count(s => 
-            s.DeadOrAlive?.Equals("Alive", StringComparison.OrdinalIgnoreCase) == true ||
-            s.DeadOrAlive?.Equals("alive", StringComparison.OrdinalIgnoreCase) == true);
-        double? survivalRate = releases.Count > 0 ? (double)aliveCount / releases.Count * 100 : null;
+        // Calculate average days to first sighting
+        double? averageDaysToFirstSighting = daysToFirstSightingList.Count > 0
+            ? daysToFirstSightingList.Average()
+            : null;
 
         return new OverviewStatisticsDto
         {
@@ -161,9 +185,14 @@ public class YearInReviewController : ControllerBase
             TotalSightings = sightings.Count,
             UniqueVolunteers = uniqueVolunteers.Count,
             UniqueRegions = uniqueRegions.Count,
-            AverageSurvivalDays = survivalDaysList.Count > 0 ? survivalDaysList.Average() : null,
             TotalFlightDistanceKm = totalDistance,
-            SurvivalRate = survivalRate
+            AverageDaysToFirstSighting = averageDaysToFirstSighting,
+            ReleaseLocationsCount = geographicDistribution.ReleaseLocations.Count,
+            SightingLocationsCount = geographicDistribution.SightingLocations.Count,
+            MostActiveReleaseLocationAddress = geographicDistribution.MostActiveReleaseLocation?.Address,
+            MostActiveReleaseLocationCount = geographicDistribution.MostActiveReleaseLocation?.Count ?? 0,
+            MostActiveSightingLocationAddress = geographicDistribution.MostActiveSightingLocation?.Address,
+            MostActiveSightingLocationCount = geographicDistribution.MostActiveSightingLocation?.Count ?? 0
         };
     }
 

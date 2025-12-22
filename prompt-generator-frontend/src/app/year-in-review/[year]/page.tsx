@@ -5,30 +5,16 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Loader2, Sparkles, Calendar, Eye, Users, MapPin, TrendingUp, Award, AlertCircle } from "lucide-react";
+import { ArrowLeft, Loader2, Sparkles, Calendar, Eye, Users, MapPin, TrendingUp, Award, AlertCircle, Clock } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { showLoading, hideLoading } from "@/store/slices/loadingSlice";
 import { toast } from "sonner";
 import { AxiosError } from "axios";
-import dynamic from "next/dynamic";
 import { butterflyService } from "@/services/butterflyService";
 import { YearInReview } from "@/types/butterfly";
 import ScrollProgress from "@/components/butterfly/ScrollProgress";
 import ScrollReveal from "@/components/butterfly/ScrollReveal";
 import AnimatedNumber from "@/components/butterfly/AnimatedNumber";
-
-// Dynamically import map component to avoid SSR issues
-const GeographicDistributionMap = dynamic(
-  () => import("@/components/butterfly/GeographicDistributionMap"),
-  { 
-    ssr: false,
-    loading: () => (
-      <div className="h-[600px] w-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg">
-        <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
-      </div>
-    )
-  }
-);
 
 export default function YearInReviewPage() {
   const params = useParams();
@@ -109,10 +95,10 @@ export default function YearInReviewPage() {
                     No data records found for year {year}
                   </p>
                   <div className="flex gap-4 justify-center">
-                    <Link href="/search">
+                    <Link href="/">
                       <Button variant="outline">
                         <ArrowLeft className="w-4 h-4 mr-2" />
-                        Back to Search
+                        Back to Home
                       </Button>
                     </Link>
                     <Button onClick={() => router.push(`/year-in-review/${new Date().getFullYear()}`)}>
@@ -135,82 +121,66 @@ export default function YearInReviewPage() {
 
       {/* Navigation */}
       <div className="sticky top-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-800">
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
-            <Link href="/search">
+            <Link href="/">
               <Button variant="ghost" size="sm">
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Back
+                Back to Home
               </Button>
             </Link>
-            <div className="text-sm text-gray-600 dark:text-gray-400">
+            <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
               {year} Year in Review
             </div>
           </div>
         </div>
       </div>
 
-      {/* Cover Section */}
-      <section className="min-h-screen flex items-center justify-center px-4 py-16">
-        <ScrollReveal direction="fade" delay={200}>
-          <div className="text-center max-w-4xl mx-auto">
-            <div className="mb-8">
-              <Sparkles className="w-24 h-24 text-orange-500 mx-auto mb-6 animate-pulse" />
-              <h1 className="text-5xl md:text-7xl font-bold text-gray-900 dark:text-white mb-4">
-                {year} Butterfly
+      {/* Hero Section */}
+      <section className="pt-16 pb-12 px-4">
+        <div className="container mx-auto max-w-4xl">
+          <ScrollReveal direction="fade" delay={100}>
+            <div className="text-center">
+              <Sparkles className="w-16 h-16 text-orange-500 mx-auto mb-4 animate-pulse" />
+              <h1 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white mb-3">
+                {year} Year in Review
               </h1>
-              <h2 className="text-3xl md:text-5xl font-bold text-orange-600 dark:text-orange-400 mb-6">
-                Year in Review
-              </h2>
-              <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
-                Thank you to all volunteers for their contributions. Let's review the amazing data from this year
+              <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+                A comprehensive overview of butterfly tracking data and achievements
               </p>
             </div>
-            <div className="flex justify-center">
-              <Button
-                size="lg"
-                onClick={() => {
-                  document.getElementById('overview-section')?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className="bg-orange-600 hover:bg-orange-700 text-white transition-transform hover:scale-105"
-              >
-                Start Exploring
-              </Button>
-            </div>
-          </div>
-        </ScrollReveal>
+          </ScrollReveal>
+        </div>
       </section>
 
       {/* Overview Statistics Section */}
-      <section id="overview-section" className="min-h-screen flex items-center justify-center px-4 py-16">
-        <div className="container mx-auto max-w-6xl">
+      <section id="overview-section" className="py-12 px-4 bg-white/50 dark:bg-gray-800/50">
+        <div className="container mx-auto max-w-7xl">
           <ScrollReveal direction="up" delay={0}>
-            <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-                Overview Statistics
+            <div className="text-center mb-10">
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                Key Statistics
               </h2>
-              <p className="text-lg text-gray-600 dark:text-gray-300">
-                Core data metrics for the {year} project
+              <p className="text-gray-600 dark:text-gray-400">
+                Core metrics for {year}
               </p>
             </div>
           </ScrollReveal>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Total Releases */}
             <ScrollReveal direction="up" delay={100}>
-              <Card className="shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">Total Releases</CardTitle>
-                    <Sparkles className="w-6 h-6 text-orange-600" />
+              <Card className="shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-l-orange-500">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <Sparkles className="w-5 h-5 text-orange-600" />
+                    <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Releases</CardTitle>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-4xl font-bold text-orange-600 dark:text-orange-400 mb-2">
-                    <AnimatedNumber value={data.overview.totalReleases} duration={1500} />
+                  <div className="text-3xl font-bold text-orange-600 dark:text-orange-400 mb-1">
+                    <AnimatedNumber value={data.totalReleases} duration={1500} />
                   </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Total butterflies released this year
+                  <p className="text-xs text-gray-500 dark:text-gray-500">
+                    Butterflies released
                   </p>
                 </CardContent>
               </Card>
@@ -218,19 +188,17 @@ export default function YearInReviewPage() {
 
             {/* Total Sightings */}
             <ScrollReveal direction="up" delay={200}>
-              <Card className="shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">Total Sightings</CardTitle>
-                    <Eye className="w-6 h-6 text-blue-600" />
+              <Card className="shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-l-blue-500">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <Eye className="w-5 h-5 text-blue-600" />
+                    <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Sightings</CardTitle>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-4xl font-bold text-blue-600 dark:text-blue-400 mb-2">
-                    <AnimatedNumber value={data.overview.totalSightings} duration={1500} />
+                  <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-1">
+                    <AnimatedNumber value={data.totalSightings} duration={1500} />
                   </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Total number of sighting records
+                  <p className="text-xs text-gray-500 dark:text-gray-500">
+                    Sighting records
                   </p>
                 </CardContent>
               </Card>
@@ -238,19 +206,17 @@ export default function YearInReviewPage() {
 
             {/* Unique Volunteers */}
             <ScrollReveal direction="up" delay={300}>
-              <Card className="shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">Volunteers</CardTitle>
-                    <Users className="w-6 h-6 text-green-600" />
+              <Card className="shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-l-green-500">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <Users className="w-5 h-5 text-green-600" />
+                    <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Participants</CardTitle>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-4xl font-bold text-green-600 dark:text-green-400 mb-2">
-                    <AnimatedNumber value={data.overview.uniqueVolunteers} duration={1500} />
+                  <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-1">
+                    <AnimatedNumber value={data.uniqueVolunteers} duration={1500} />
                   </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Total number of volunteers participating
+                  <p className="text-xs text-gray-500 dark:text-gray-500">
+                    Active participants
                   </p>
                 </CardContent>
               </Card>
@@ -258,267 +224,170 @@ export default function YearInReviewPage() {
 
             {/* Unique Regions */}
             <ScrollReveal direction="up" delay={400}>
-              <Card className="shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">Regions Covered</CardTitle>
-                    <MapPin className="w-6 h-6 text-purple-600" />
+              <Card className="shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-l-purple-500">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <MapPin className="w-5 h-5 text-purple-600" />
+                    <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Regions</CardTitle>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-4xl font-bold text-purple-600 dark:text-purple-400 mb-2">
-                    <AnimatedNumber value={data.overview.uniqueRegions} duration={1500} />
+                  <div className="text-3xl font-bold text-purple-600 dark:text-purple-400 mb-1">
+                    <AnimatedNumber value={data.uniqueRegions} duration={1500} />
                   </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Number of geographic regions covered by butterfly activity
+                  <p className="text-xs text-gray-500 dark:text-gray-500">
+                    Regions covered
                   </p>
                 </CardContent>
               </Card>
             </ScrollReveal>
 
-            {/* Average Survival Days */}
-            {data.overview.averageSurvivalDays !== undefined && (
-              <ScrollReveal direction="up" delay={500}>
-                <Card className="shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">Average Survival Days</CardTitle>
-                      <Calendar className="w-6 h-6 text-red-600" />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-4xl font-bold text-red-600 dark:text-red-400 mb-2">
-                      <AnimatedNumber 
-                        value={Math.round(data.overview.averageSurvivalDays)} 
-                        duration={1500} 
-                      />
-                    </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Average survival time for all butterflies
-                    </p>
-                  </CardContent>
-                </Card>
-              </ScrollReveal>
-            )}
+            {/* Average Days to First Sighting */}
+            <ScrollReveal direction="up" delay={500}>
+              <Card className="shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-l-teal-500">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <Clock className="w-5 h-5 text-teal-600" />
+                    <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Days to First Sighting</CardTitle>
+                  </div>
+                  <div className="text-3xl font-bold text-teal-600 dark:text-teal-400 mb-1">
+                    {data.averageDaysToFirstSighting !== undefined ? (
+                      <>
+                        <AnimatedNumber 
+                          value={Math.round(data.averageDaysToFirstSighting)} 
+                          duration={1500} 
+                        />
+                        <span className="text-lg ml-1">days</span>
+                      </>
+                    ) : (
+                      <span className="text-lg">N/A</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-500">
+                    Average time to first sighting
+                  </p>
+                </CardContent>
+              </Card>
+            </ScrollReveal>
 
             {/* Total Flight Distance */}
             <ScrollReveal direction="up" delay={600}>
-              <Card className="shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">Total Flight Distance</CardTitle>
-                    <TrendingUp className="w-6 h-6 text-indigo-600" />
+              <Card className="shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-l-indigo-500">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <TrendingUp className="w-5 h-5 text-indigo-600" />
+                    <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Flight Distance</CardTitle>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-4xl font-bold text-indigo-600 dark:text-indigo-400 mb-2">
+                  <div className="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mb-1">
                     <AnimatedNumber 
-                      value={data.overview.totalFlightDistanceKm} 
+                      value={data.totalFlightDistanceKm} 
                       duration={1500} 
                       decimals={1}
-                      suffix=" km"
                     />
+                    <span className="text-lg ml-1">km</span>
                   </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Sum of all flight trajectories
+                  <p className="text-xs text-gray-500 dark:text-gray-500">
+                    Total distance traveled
                   </p>
                 </CardContent>
               </Card>
             </ScrollReveal>
-
-            {/* Survival Rate */}
-            {data.overview.survivalRate !== undefined && (
-              <ScrollReveal direction="up" delay={700}>
-                <Card className="shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 md:col-span-2 lg:col-span-1">
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">Survival Rate</CardTitle>
-                      <Award className="w-6 h-6 text-yellow-600" />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-4xl font-bold text-yellow-600 dark:text-yellow-400 mb-2">
-                      <AnimatedNumber 
-                        value={data.overview.survivalRate} 
-                        duration={1500} 
-                        decimals={1}
-                        suffix="%"
-                      />
-                    </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Percentage of butterflies that survived
-                    </p>
-                  </CardContent>
-                </Card>
-              </ScrollReveal>
-            )}
           </div>
         </div>
       </section>
 
       {/* Geographic Distribution Section */}
-      <section className="min-h-screen flex items-center justify-center px-4 py-16">
+      <section className="py-12 px-4">
         <div className="container mx-auto max-w-6xl">
           <ScrollReveal direction="up" delay={0}>
-            <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
                 Geographic Distribution
               </h2>
-              <p className="text-lg text-gray-600 dark:text-gray-300">
-                View the distribution of release and sighting locations for all butterflies in {year}
+              <p className="text-gray-600 dark:text-gray-400">
+                Location statistics for {year}
               </p>
             </div>
           </ScrollReveal>
 
-          <ScrollReveal direction="up" delay={200}>
-            <Card className="shadow-lg mb-6">
-            <CardHeader>
-              <CardTitle>Activity Range Map</CardTitle>
-              <CardDescription>
-                Red markers: Release points | Blue markers: Sighting points | Orange circles: Most active release location | Blue circles: Most active sighting location
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <GeographicDistributionMap
-                geographicDistribution={data.geographicDistribution}
-                className="h-[600px] w-full rounded-lg"
-              />
-              </CardContent>
-            </Card>
-          </ScrollReveal>
-
-          {/* Statistics Cards */}
-          <ScrollReveal direction="up" delay={400}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Release Locations Count */}
-            <Card className="shadow-lg">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">Release Locations</CardTitle>
-                  <MapPin className="w-5 h-5 text-red-600" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-red-600 dark:text-red-400 mb-2">
-                  {data.geographicDistribution.releaseLocations.length.toLocaleString()}
-                </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  release location(s)
-                </p>
-                {data.geographicDistribution.mostActiveReleaseLocation && (
-                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Most Active Location</p>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      {data.geographicDistribution.mostActiveReleaseLocation.address || "Unknown Location"}
-                    </p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                      {data.geographicDistribution.mostActiveReleaseLocation.count} release(s)
-                    </p>
+            <ScrollReveal direction="up" delay={200}>
+              <Card className="shadow-md">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-5 h-5 text-red-600" />
+                    <CardTitle className="text-lg">Release Locations</CardTitle>
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-4xl font-bold text-red-600 dark:text-red-400 mb-4">
+                    {data.releaseLocationsCount.toLocaleString()}
+                  </div>
+                  {data.mostActiveReleaseLocationAddress && (
+                    <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Most Active</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2">
+                        {data.mostActiveReleaseLocationAddress}
+                      </p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                        {data.mostActiveReleaseLocationCount} release(s)
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </ScrollReveal>
 
             {/* Sighting Locations Count */}
-            <Card className="shadow-lg">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">Sighting Locations</CardTitle>
-                  <Eye className="w-5 h-5 text-blue-600" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-2">
-                  {data.geographicDistribution.sightingLocations.length.toLocaleString()}
-                </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  sighting location(s)
-                </p>
-                {data.geographicDistribution.mostActiveSightingLocation && (
-                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Most Active Location</p>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      {data.geographicDistribution.mostActiveSightingLocation.address || "Unknown Location"}
-                    </p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                      {data.geographicDistribution.mostActiveSightingLocation.count} sighting(s)
-                    </p>
+            <ScrollReveal direction="up" delay={300}>
+              <Card className="shadow-md">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <Eye className="w-5 h-5 text-blue-600" />
+                    <CardTitle className="text-lg">Sighting Locations</CardTitle>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-            </div>
-          </ScrollReveal>
-
-          {/* Geographic Bounds Info */}
-          {data.geographicDistribution.bounds && (
-            <ScrollReveal direction="up" delay={600}>
-            <Card className="shadow-lg mt-6">
-              <CardHeader>
-                <CardTitle className="text-lg">Activity Range</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <p className="text-gray-600 dark:text-gray-400 mb-1">Northernmost Latitude</p>
-                    <p className="font-mono font-semibold text-gray-900 dark:text-white">
-                      {data.geographicDistribution.bounds.maxLatitude.toFixed(4)}°
-                    </p>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-4xl font-bold text-blue-600 dark:text-blue-400 mb-4">
+                    {data.sightingLocationsCount.toLocaleString()}
                   </div>
-                  <div>
-                    <p className="text-gray-600 dark:text-gray-400 mb-1">Southernmost Latitude</p>
-                    <p className="font-mono font-semibold text-gray-900 dark:text-white">
-                      {data.geographicDistribution.bounds.minLatitude.toFixed(4)}°
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600 dark:text-gray-400 mb-1">Easternmost Longitude</p>
-                    <p className="font-mono font-semibold text-gray-900 dark:text-white">
-                      {data.geographicDistribution.bounds.maxLongitude.toFixed(4)}°
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600 dark:text-gray-400 mb-1">Westernmost Longitude</p>
-                    <p className="font-mono font-semibold text-gray-900 dark:text-white">
-                      {data.geographicDistribution.bounds.minLongitude.toFixed(4)}°
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                  {data.mostActiveSightingLocationAddress && (
+                    <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Most Active</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2">
+                        {data.mostActiveSightingLocationAddress}
+                      </p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                        {data.mostActiveSightingLocationCount} sighting(s)
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </ScrollReveal>
-          )}
+          </div>
         </div>
       </section>
 
       {/* Footer Section */}
-      <section className="min-h-screen flex items-center justify-center px-4 py-16">
-        <ScrollReveal direction="fade" delay={200}>
-          <div className="container mx-auto max-w-6xl text-center">
-            <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-              Thank You to All Volunteers
+      <section className="py-16 px-4 bg-gradient-to-br from-orange-50 to-yellow-50 dark:from-gray-800 dark:to-gray-900">
+        <div className="container mx-auto max-w-4xl text-center">
+          <ScrollReveal direction="fade" delay={100}>
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">
+              Thank You to All Participants
             </h2>
-            <p className="text-lg text-gray-600 dark:text-gray-300 mb-8">
-              Let's look forward to more amazing data in {year + 1}
+            <p className="text-gray-600 dark:text-gray-300 mb-8">
+              Looking forward to more amazing data in {year + 1}
             </p>
             <div className="flex gap-4 justify-center">
-              <Link href="/search">
+              <Link href="/">
                 <Button variant="outline" className="transition-transform hover:scale-105">
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to Search
+                  Back to Home
                 </Button>
               </Link>
-              <Button
-                onClick={() => {
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-                className="transition-transform hover:scale-105"
-              >
-                Back to Top
-              </Button>
             </div>
-          </div>
-        </ScrollReveal>
+          </ScrollReveal>
+        </div>
       </section>
     </div>
   );
