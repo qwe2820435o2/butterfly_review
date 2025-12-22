@@ -259,6 +259,37 @@ export default function OverviewMap({
 
   return (
     <div className={className} style={{ position: 'relative' }}>
+      {/* Legend */}
+      <div className="absolute top-4 right-4 z-10 bg-white rounded-lg shadow-lg p-4 border border-gray-200">
+        <h4 className="font-semibold text-sm mb-3 text-gray-800">Legend</h4>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 flex items-center justify-center">
+              <img 
+                src="https://maps.google.com/mapfiles/ms/icons/red-dot.png" 
+                alt="Release Point"
+                className="w-6 h-6"
+              />
+            </div>
+            <span className="text-sm text-gray-700">Release Point</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 flex items-center justify-center">
+              <img 
+                src="https://maps.google.com/mapfiles/ms/icons/blue-dot.png" 
+                alt="Sighting Point"
+                className="w-6 h-6"
+              />
+            </div>
+            <span className="text-sm text-gray-700">Sighting Point</span>
+          </div>
+          <div className="pt-2 border-t border-gray-200 mt-2">
+            <p className="text-xs text-gray-500 mb-1">Trajectory Lines:</p>
+            <p className="text-xs text-gray-600">Each tagNumber has a unique color</p>
+          </div>
+        </div>
+      </div>
+
       <GoogleMap
         mapContainerStyle={mapContainerStyle}
         center={center}
