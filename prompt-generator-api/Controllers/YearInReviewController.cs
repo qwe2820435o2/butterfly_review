@@ -176,30 +176,103 @@ public class YearInReviewController : ControllerBase
     {
         var releaseLocations = releases
             .Where(r => r.Latitude.HasValue && r.Longitude.HasValue)
-            .Select(r => new LocationPointDto
+            .Select(r =>
             {
-                Latitude = r.Latitude!.Value,
-                Longitude = r.Longitude!.Value,
-                Address = r.Address,
-                Date = r.ReleaseDateTimeUtc
+                var lat = r.Latitude!.Value;
+                var lng = r.Longitude!.Value;
+                
+                // Check if coordinates are within New Zealand bounds
+                // If not, try swapping lat/lng (common data error)
+                if (!IsWithinNewZealandBounds(lat, lng))
+                {
+                    // Try swapping coordinates
+                    if (IsWithinNewZealandBounds(lng, lat))
+                    {
+                        // Coordinates were swapped, correct them
+                        lat = r.Longitude!.Value;
+                        lng = r.Latitude!.Value;
+                    }
+                    else
+                    {
+                        // Coordinates are outside NZ bounds even after swap, return null to filter out
+                        return null;
+                    }
+                }
+                
+                return new LocationPointDto
+                {
+                    Latitude = lat,
+                    Longitude = lng,
+                    Address = r.Address,
+                    Date = r.ReleaseDateTimeUtc
+                };
             })
+            .Where(l => l != null)
             .ToList();
 
         var sightingLocations = sightings
             .Where(s => s.Latitude.HasValue && s.Longitude.HasValue)
-            .Select(s => new LocationPointDto
+            .Select(s =>
             {
-                Latitude = s.Latitude!.Value,
-                Longitude = s.Longitude!.Value,
-                Address = s.Address,
-                Date = s.SightingDateTimeUtc
+                var lat = s.Latitude!.Value;
+                var lng = s.Longitude!.Value;
+                
+                // Check if coordinates are within New Zealand bounds
+                // If not, try swapping lat/lng (common data error)
+                if (!IsWithinNewZealandBounds(lat, lng))
+                {
+                    // Try swapping coordinates
+                    if (IsWithinNewZealandBounds(lng, lat))
+                    {
+                        // Coordinates were swapped, correct them
+                        lat = s.Longitude!.Value;
+                        lng = s.Latitude!.Value;
+                    }
+                    else
+                    {
+                        // Coordinates are outside NZ bounds even after swap, return null to filter out
+                        return null;
+                    }
+                }
+                
+                return new LocationPointDto
+                {
+                    Latitude = lat,
+                    Longitude = lng,
+                    Address = s.Address,
+                    Date = s.SightingDateTimeUtc
+                };
             })
+            .Where(l => l != null)
             .ToList();
 
-        // Find most active release location
+        // Find most active release location (only from valid NZ coordinates)
         var releaseLocationGroups = releases
             .Where(r => r.Latitude.HasValue && r.Longitude.HasValue && !string.IsNullOrWhiteSpace(r.Address))
-            .GroupBy(r => r.Address)
+            .Select(r =>
+            {
+                var lat = r.Latitude!.Value;
+                var lng = r.Longitude!.Value;
+                
+                // Check if coordinates are within New Zealand bounds
+                if (!IsWithinNewZealandBounds(lat, lng))
+                {
+                    // Try swapping coordinates
+                    if (IsWithinNewZealandBounds(lng, lat))
+                    {
+                        lat = r.Longitude!.Value;
+                        lng = r.Latitude!.Value;
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                }
+                
+                return new { r.Address, Latitude = lat, Longitude = lng };
+            })
+            .Where(r => r != null)
+            .GroupBy(r => r!.Address)
             .OrderByDescending(g => g.Count())
             .FirstOrDefault();
 
@@ -209,17 +282,40 @@ public class YearInReviewController : ControllerBase
             var firstRelease = releaseLocationGroups.First();
             mostActiveRelease = new LocationWithCountDto
             {
-                Latitude = firstRelease.Latitude!.Value,
-                Longitude = firstRelease.Longitude!.Value,
+                Latitude = firstRelease.Latitude,
+                Longitude = firstRelease.Longitude,
                 Address = firstRelease.Address,
                 Count = releaseLocationGroups.Count()
             };
         }
 
-        // Find most active sighting location
+        // Find most active sighting location (only from valid NZ coordinates)
         var sightingLocationGroups = sightings
             .Where(s => s.Latitude.HasValue && s.Longitude.HasValue && !string.IsNullOrWhiteSpace(s.Address))
-            .GroupBy(s => s.Address)
+            .Select(s =>
+            {
+                var lat = s.Latitude!.Value;
+                var lng = s.Longitude!.Value;
+                
+                // Check if coordinates are within New Zealand bounds
+                if (!IsWithinNewZealandBounds(lat, lng))
+                {
+                    // Try swapping coordinates
+                    if (IsWithinNewZealandBounds(lng, lat))
+                    {
+                        lat = s.Longitude!.Value;
+                        lng = s.Latitude!.Value;
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                }
+                
+                return new { s.Address, Latitude = lat, Longitude = lng };
+            })
+            .Where(s => s != null)
+            .GroupBy(s => s!.Address)
             .OrderByDescending(g => g.Count())
             .FirstOrDefault();
 
@@ -229,8 +325,8 @@ public class YearInReviewController : ControllerBase
             var firstSighting = sightingLocationGroups.First();
             mostActiveSighting = new LocationWithCountDto
             {
-                Latitude = firstSighting.Latitude!.Value,
-                Longitude = firstSighting.Longitude!.Value,
+                Latitude = firstSighting.Latitude,
+                Longitude = firstSighting.Longitude,
                 Address = firstSighting.Address,
                 Count = sightingLocationGroups.Count()
             };
@@ -279,6 +375,41 @@ public class YearInReviewController : ControllerBase
                 Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
         var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
         return R * c;
+    }
+
+    /// <summary>
+    /// Check if coordinates are within New Zealand bounds
+    /// New Zealand approximate bounds: Latitude: -34 to -47, Longitude: 166 to 179
+    /// Strict bounds to ensure only New Zealand locations are included
+    /// Also checks that coordinates are NOT in other countries (e.g., Australia)
+    /// </summary>
+    private static bool IsWithinNewZealandBounds(double latitude, double longitude)
+    {
+        // New Zealand is in the southern hemisphere (negative latitude) and eastern hemisphere (positive longitude)
+        // Main islands bounds: Lat: -34.0 to -47.3, Lng: 166.4 to 178.6
+        // Using strict bounds - only include coordinates clearly within New Zealand
+        
+        // First check: Must be within New Zealand bounds
+        bool inNZBounds = latitude >= -47.5 && latitude <= -33.5 &&
+                          longitude >= 166.0 && longitude <= 179.0;
+        
+        if (!inNZBounds)
+        {
+            return false;
+        }
+        
+        // Second check: Must NOT be in Australia or other nearby countries
+        // Australia bounds: Lat: -10 to -44, Lng: 113 to 154
+        // If latitude is in Australia range AND longitude is in Australia range, reject it
+        bool inAustraliaBounds = latitude >= -44.0 && latitude <= -10.0 &&
+                                 longitude >= 113.0 && longitude <= 154.0;
+        
+        if (inAustraliaBounds)
+        {
+            return false;
+        }
+        
+        return true;
     }
 }
 

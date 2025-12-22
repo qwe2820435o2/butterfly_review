@@ -21,5 +21,7 @@ public interface IReleaseSubmissionRepository
 
     Task<IReadOnlyList<ReleaseSubmission>> GetByTagNumberAsync(string tagNumber);
 
+    Task<IReadOnlyList<ReleaseSubmission>> GetAllWithCoordinatesAsync();
+
     Task DeleteByIdAsync(string id);
 }

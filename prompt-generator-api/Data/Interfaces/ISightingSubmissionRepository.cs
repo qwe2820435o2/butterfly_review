@@ -21,5 +21,7 @@ public interface ISightingSubmissionRepository
 
     Task<IReadOnlyList<SightingSubmission>> GetByTagNumberAsync(string tagNumber);
 
+    Task<IReadOnlyList<SightingSubmission>> GetAllWithCoordinatesAsync();
+
     Task DeleteByIdAsync(string id);
 }

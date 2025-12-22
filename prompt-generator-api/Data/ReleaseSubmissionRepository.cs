@@ -1,4 +1,5 @@
-﻿using MongoDB.Bson;
+﻿using System.Linq;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using tennis_wave_api.Data.Interfaces;
 using tennis_wave_api.Models.Entities;
@@ -104,6 +105,22 @@ public class ReleaseSubmissionRepository : IReleaseSubmissionRepository
     public async Task<IReadOnlyList<ReleaseSubmission>> GetByTagNumberAsync(string tagNumber)
     {
         var filter = Builders<ReleaseSubmission>.Filter.Eq(x => x.TagNumber, tagNumber);
+        var list = await _collection
+            .Find(filter)
+            .SortByDescending(x => x.CreatedAtUtc)
+            .ToListAsync();
+
+        return list;
+    }
+
+    public async Task<IReadOnlyList<ReleaseSubmission>> GetAllWithCoordinatesAsync()
+    {
+        // Get all release submissions that have coordinates
+        var filter = Builders<ReleaseSubmission>.Filter.And(
+            Builders<ReleaseSubmission>.Filter.Ne(x => x.Latitude, null),
+            Builders<ReleaseSubmission>.Filter.Ne(x => x.Longitude, null)
+        );
+
         var list = await _collection
             .Find(filter)
             .SortByDescending(x => x.CreatedAtUtc)

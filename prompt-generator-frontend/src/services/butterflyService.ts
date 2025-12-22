@@ -4,7 +4,9 @@ import {
   SightingSubmission,
   ApiResponse,
   TagNumberSummary,
-  YearInReview
+  YearInReview,
+  TrajectoryPoint,
+  TrajectoryForMap
 } from '@/types/butterfly';
 import {
   getButterflyStatus,
@@ -256,6 +258,291 @@ export const butterflyService = {
       return response.data.data;
     } catch (error) {
       console.error('Error getting year in review:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get all unique tag numbers from the API
+   * @returns Array of unique tag numbers
+   */
+  async getAllTagNumbers(): Promise<string[]> {
+    try {
+      const response = await axiosInstance.get<ApiResponse<string[]>>(
+        `/api/Trajectories/tagNumbers`
+      );
+
+      if (response.data.code !== 0 || !response.data.data) {
+        throw new Error(response.data.message || 'Failed to get tag numbers');
+      }
+
+      return response.data.data;
+    } catch (error) {
+      console.error('Error getting all tag numbers:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get all trajectories for overview map
+   * This method gets all trajectory data with coordinates from the API
+   * @returns Array of trajectory data grouped by tagNumber with colors
+   */
+  async getAllTrajectories(): Promise<TrajectoryForMap[]> {
+    try {
+      // Call the endpoint that returns all trajectory points (flat structure)
+      const response = await axiosInstance.get<ApiResponse<TrajectoryPoint[]>>(
+        `/api/Trajectories/all`
+      );
+
+      if (response.data.code !== 0 || !response.data.data) {
+        throw new Error(response.data.message || 'Failed to get all trajectories');
+      }
+
+      const allPoints = response.data.data;
+
+      // Group points by tagNumber
+      // Ensure each point is only added to its own tagNumber group
+      // CRITICAL: Use exact tagNumber matching (case-sensitive) to prevent grouping errors
+      const pointsByTag = new Map<string, TrajectoryPoint[]>();
+      allPoints.forEach(point => {
+        // Validate that point has a tagNumber
+        if (!point.tagNumber || point.tagNumber.trim() === '') {
+          console.warn('Point missing tagNumber, skipping:', point);
+          return;
+        }
+        
+        // Use exact tagNumber (case-sensitive, no trimming) to ensure correct grouping
+        // This prevents "Wag856" and "WAE331" from being grouped together
+        const tagNumber = point.tagNumber; // Keep original case and spacing
+        
+        if (!pointsByTag.has(tagNumber)) {
+          pointsByTag.set(tagNumber, []);
+        }
+        
+        // Double-check: ensure point's tagNumber exactly matches the group key
+        if (point.tagNumber === tagNumber) {
+          pointsByTag.get(tagNumber)!.push(point);
+        } else {
+          console.error(`CRITICAL: Point tagNumber mismatch: expected "${tagNumber}", got "${point.tagNumber}". This should never happen!`, point);
+        }
+      });
+      
+      // Debug: Log all tagNumbers to verify grouping
+      console.log('Grouped trajectories by tagNumber:', Array.from(pointsByTag.keys()));
+      
+      // Debug: Check for specific tagNumbers mentioned by user
+      if (pointsByTag.has('Wag856')) {
+        const wag856Points = pointsByTag.get('Wag856')!;
+        console.log('Wag856 points:', wag856Points.map(p => ({ type: p.type, tagNumber: p.tagNumber, address: p.address })));
+      }
+      if (pointsByTag.has('WAE331')) {
+        const wae331Points = pointsByTag.get('WAE331')!;
+        console.log('WAE331 points:', wae331Points.map(p => ({ type: p.type, tagNumber: p.tagNumber, address: p.address })));
+      }
+
+      // Generate colors for each tagNumber
+      const colors = [
+        "#FF6B35", "#4ECDC4", "#45B7D1", "#FFA07A", "#98D8C8",
+        "#F7DC6F", "#BB8FCE", "#85C1E2", "#F8B739", "#E74C3C",
+        "#3498DB", "#2ECC71", "#9B59B6", "#E67E22", "#1ABC9C",
+        "#F39C12", "#E91E63", "#00BCD4", "#8BC34A", "#FF9800"
+      ];
+
+      // Helper function to validate coordinates are within New Zealand bounds
+      const isWithinNewZealandBounds = (lat: number, lng: number): boolean => {
+        // New Zealand bounds: Lat: -47.5 to -33.5, Lng: 166.0 to 179.0
+        const inNZBounds = lat >= -47.5 && lat <= -33.5 &&
+                           lng >= 166.0 && lng <= 179.0;
+        
+        if (!inNZBounds) {
+          return false;
+        }
+        
+        // Must NOT be in Australia or other nearby countries
+        // Australia bounds: Lat: -44.0 to -10.0, Lng: 113.0 to 154.0
+        const inAustraliaBounds = lat >= -44.0 && lat <= -10.0 &&
+                                  lng >= 113.0 && lng <= 154.0;
+        
+        if (inAustraliaBounds) {
+          return false;
+        }
+        
+        return true;
+      };
+
+      // Convert to map format with colors
+      const tagNumbers = Array.from(pointsByTag.keys());
+      return tagNumbers.map((tagNumber, index) => {
+        const points = pointsByTag.get(tagNumber)!;
+        
+        // Separate release and sighting points
+        // Business logic: A butterfly is only released once, so each tagNumber should have only one release point
+        // If multiple release points exist (data quality issue), we'll take the first one
+        // CRITICAL: Filter to ensure all points belong to this tagNumber
+        const releasePoints = points.filter(p => p.type === 1 && p.tagNumber === tagNumber);
+        const sightingPoints = points.filter(p => p.type === 2 && p.tagNumber === tagNumber);
+        
+        // Log warning if any points don't match the tagNumber (should not happen)
+        const mismatchedPoints = points.filter(p => p.tagNumber !== tagNumber);
+        if (mismatchedPoints.length > 0) {
+          console.warn(`Found ${mismatchedPoints.length} point(s) with mismatched tagNumber for group ${tagNumber}:`, mismatchedPoints);
+        }
+
+        // Warn if multiple release points found (should not happen based on backend logic)
+        if (releasePoints.length > 1) {
+          console.warn(`Multiple release points found for tagNumber ${tagNumber}. Taking the first one.`);
+        }
+
+        // Get the first release point (should only be one based on backend deduplication)
+        // Also validate coordinates are within New Zealand bounds (frontend validation)
+        const releasePoint = releasePoints.length > 0 && isWithinNewZealandBounds(releasePoints[0].latitude, releasePoints[0].longitude)
+          ? {
+              lat: releasePoints[0].latitude,
+              lng: releasePoints[0].longitude,
+              label: releasePoints[0].address || `Release Point`,
+              description: undefined,
+              type: "release" as const,
+              date: undefined,
+              tagNumber: tagNumber
+            }
+          : undefined;
+
+        // Convert sighting points
+        // Business logic: A tagNumber can be sighted multiple times, so keep all sighting points
+        // Filter out points that are not within New Zealand bounds AND ensure tagNumber matches
+        const sightingPointsForMap = sightingPoints
+          .filter(point => {
+            // CRITICAL: Ensure point belongs to this tagNumber
+            if (point.tagNumber !== tagNumber) {
+              console.warn(`Sighting point tagNumber mismatch: expected ${tagNumber}, got ${point.tagNumber}`);
+              return false;
+            }
+            return isWithinNewZealandBounds(point.latitude, point.longitude);
+          })
+          .map((point, idx) => ({
+            lat: point.latitude,
+            lng: point.longitude,
+            label: point.address || `Sighting Point ${idx + 1}`,
+            description: undefined,
+            type: "sighting" as const,
+            date: undefined,
+            tagNumber: tagNumber // Explicitly set to ensure consistency
+          }));
+
+        // Final validation: Ensure all points in this trajectory belong to the same tagNumber
+        const allTrajectoryPoints = [
+          ...(releasePoint ? [releasePoint] : []),
+          ...sightingPointsForMap
+        ];
+        
+        const mismatchedInTrajectory = allTrajectoryPoints.filter(p => p.tagNumber !== tagNumber);
+        if (mismatchedInTrajectory.length > 0) {
+          console.error(`CRITICAL ERROR: Trajectory for ${tagNumber} contains points with different tagNumbers:`, mismatchedInTrajectory);
+        }
+        
+        return {
+          tagNumber: tagNumber,
+          releasePoint: releasePoint,
+          sightingPoints: sightingPointsForMap,
+          color: colors[index % colors.length]
+        };
+      });
+    } catch (error) {
+      console.error('Error getting all trajectories:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get all trajectories by collecting data from all unique tagNumbers
+   * This is a workaround method that requires knowing all tagNumbers
+   * @param tagNumbers Array of tagNumbers to get trajectories for
+   * @returns Array of trajectory data
+   */
+  async getTrajectoriesByTagNumbers(tagNumbers: string[]): Promise<Array<{
+    tagNumber: string;
+    releasePoint?: {
+      lat: number;
+      lng: number;
+      label: string;
+      description?: string;
+      type: "release";
+      date?: string;
+      tagNumber: string;
+    };
+    sightingPoints: Array<{
+      lat: number;
+      lng: number;
+      label: string;
+      description?: string;
+      type: "sighting";
+      date?: string;
+      tagNumber: string;
+    }>;
+    color: string;
+  }>> {
+    try {
+      // Generate colors for each tagNumber
+      const colors = [
+        "#FF6B35", "#4ECDC4", "#45B7D1", "#FFA07A", "#98D8C8",
+        "#F7DC6F", "#BB8FCE", "#85C1E2", "#F8B739", "#E74C3C",
+        "#3498DB", "#2ECC71", "#9B59B6", "#E67E22", "#1ABC9C",
+        "#F39C12", "#E91E63", "#00BCD4", "#8BC34A", "#FF9800"
+      ];
+
+      // Get trajectories for all tagNumbers in parallel
+      const trajectoryPromises = tagNumbers.map(async (tagNumber, index) => {
+        try {
+          const trajectory = await this.getTrajectoryByTagNumber(tagNumber);
+          
+          // Convert to map format
+          const releasePoint = trajectory.release && trajectory.release.latitude && trajectory.release.longitude
+            ? {
+                lat: trajectory.release.latitude,
+                lng: trajectory.release.longitude,
+                label: trajectory.release.address || `Release Point`,
+                description: trajectory.release.notes,
+                type: "release" as const,
+                date: trajectory.release.releaseDatePretty || (trajectory.release.releaseDateTimeUtc ? new Date(trajectory.release.releaseDateTimeUtc).toLocaleDateString('en-US') : undefined),
+                tagNumber: tagNumber
+              }
+            : undefined;
+
+          const sightingPoints = trajectory.sightings
+            .filter(s => s.latitude && s.longitude)
+            .map((sighting, idx) => ({
+              lat: sighting.latitude!,
+              lng: sighting.longitude!,
+              label: sighting.address || `Sighting Point ${idx + 1}`,
+              description: sighting.condition,
+              type: "sighting" as const,
+              date: sighting.sightingDatePretty || (sighting.sightingDateTimeUtc ? new Date(sighting.sightingDateTimeUtc).toLocaleDateString('en-US') : undefined),
+              tagNumber: tagNumber
+            }));
+
+          // Only return if there's at least one point with coordinates
+          if (releasePoint || sightingPoints.length > 0) {
+            return {
+              tagNumber: tagNumber,
+              releasePoint: releasePoint,
+              sightingPoints: sightingPoints,
+              color: colors[index % colors.length]
+            };
+          }
+          return null;
+        } catch (error) {
+          console.error(`Error getting trajectory for tag ${tagNumber}:`, error);
+          return null;
+        }
+      });
+
+      const trajectories = await Promise.all(trajectoryPromises);
+      
+      // Filter out null results
+      return trajectories.filter((t): t is NonNullable<typeof t> => t !== null);
+    } catch (error) {
+      console.error('Error getting trajectories by tag numbers:', error);
       throw error;
     }
   }

@@ -277,3 +277,38 @@ export interface GeographicBounds {
   maxLongitude: number;
 }
 
+/**
+ * Trajectory Overview Types
+ * Flat structure: each point is a separate object with tagNumber
+ */
+export interface TrajectoryPoint {
+  tagNumber: string;
+  type: number; // 1 = Release, 2 = Sighting
+  latitude: number;
+  longitude: number;
+  address?: string;
+}
+
+export interface TrajectoryForMap {
+  tagNumber: string;
+  releasePoint?: {
+    lat: number;
+    lng: number;
+    label: string;
+    description?: string;
+    type: "release";
+    date?: string;
+    tagNumber: string;
+  };
+  sightingPoints: Array<{
+    lat: number;
+    lng: number;
+    label: string;
+    description?: string;
+    type: "sighting";
+    date?: string;
+    tagNumber: string;
+  }>;
+  color: string;
+}
+
