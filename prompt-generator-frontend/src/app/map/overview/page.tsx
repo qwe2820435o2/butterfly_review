@@ -100,10 +100,10 @@ export default function MapOverviewPage() {
                   <p className="text-gray-600 dark:text-gray-300 mb-6">
                     Unable to load trajectory data
                   </p>
-                  <Link href="/search">
+                  <Link href="/">
                     <Button variant="outline">
                       <ArrowLeft className="w-4 h-4 mr-2" />
-                      Back to Search
+                      Back to Home
                     </Button>
                   </Link>
                 </div>
@@ -120,10 +120,10 @@ export default function MapOverviewPage() {
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-6">
-          <Link href="/search">
+          <Link href="/">
             <Button variant="ghost" className="mb-4">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Search
+              Back to Home
             </Button>
           </Link>
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">
