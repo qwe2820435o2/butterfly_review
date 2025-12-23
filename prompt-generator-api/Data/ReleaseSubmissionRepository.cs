@@ -37,14 +37,19 @@ public class ReleaseSubmissionRepository : IReleaseSubmissionRepository
                     Builders<ReleaseSubmission>.IndexKeys.Ascending(x => x.CreatedAtUtc),
                     new CreateIndexOptions { Name = "idx_createdAtUtc" }),
 
-                // Compound index for coordinates query with sorting (Trajectories/all API)
-                // This index supports: Latitude != null && Longitude != null, sorted by CreatedAtUtc DESC
+                // Sparse compound index for coordinates query with sorting (Trajectories/all API)
+                // Sparse index only indexes documents where Latitude and Longitude exist (not null)
+                // This is much more efficient for queries filtering by coordinates
                 new CreateIndexModel<ReleaseSubmission>(
                     Builders<ReleaseSubmission>.IndexKeys
                         .Ascending(x => x.Latitude)
                         .Ascending(x => x.Longitude)
                         .Descending(x => x.CreatedAtUtc),
-                    new CreateIndexOptions { Name = "idx_lat_lng_createdAt" }),
+                    new CreateIndexOptions 
+                    { 
+                        Name = "idx_lat_lng_createdAt",
+                        Sparse = true // Only index documents where these fields exist
+                    }),
 
                 // Index for Email queries
                 new CreateIndexModel<ReleaseSubmission>(
@@ -136,8 +141,20 @@ public class ReleaseSubmissionRepository : IReleaseSubmissionRepository
             filter &= Builders<ReleaseSubmission>.Filter.Lte(x => x.CreatedAtUtc, endUtc.Value);
         }
 
+        // Use projection to only return fields needed for YearInReview calculation
+        var projection = Builders<ReleaseSubmission>.Projection
+            .Include(x => x.Id)
+            .Include(x => x.TagNumber)
+            .Include(x => x.Email)
+            .Include(x => x.Address)
+            .Include(x => x.Latitude)
+            .Include(x => x.Longitude)
+            .Include(x => x.ReleaseDateTimeUtc)
+            .Include(x => x.CreatedAtUtc);
+
         var list = await _collection
             .Find(filter)
+            .Project<ReleaseSubmission>(projection)
             .SortBy(x => x.CreatedAtUtc)
             .ToListAsync();
 
@@ -169,13 +186,29 @@ public class ReleaseSubmissionRepository : IReleaseSubmissionRepository
     public async Task<IReadOnlyList<ReleaseSubmission>> GetAllWithCoordinatesAsync()
     {
         // Get all release submissions that have coordinates
+        // Use $exists filter which works better with sparse indexes
+        // $exists: true already excludes null values, so we don't need $ne: null
         var filter = Builders<ReleaseSubmission>.Filter.And(
-            Builders<ReleaseSubmission>.Filter.Ne(x => x.Latitude, null),
-            Builders<ReleaseSubmission>.Filter.Ne(x => x.Longitude, null)
+            Builders<ReleaseSubmission>.Filter.Exists(x => x.Latitude),
+            Builders<ReleaseSubmission>.Filter.Exists(x => x.Longitude),
+            Builders<ReleaseSubmission>.Filter.Type(x => x.Latitude, BsonType.Double),
+            Builders<ReleaseSubmission>.Filter.Type(x => x.Longitude, BsonType.Double)
         );
+
+        // Use projection to only return fields needed for trajectory calculation
+        // This significantly reduces data transfer and memory usage
+        var projection = Builders<ReleaseSubmission>.Projection
+            .Include(x => x.Id)
+            .Include(x => x.TagNumber)
+            .Include(x => x.Latitude)
+            .Include(x => x.Longitude)
+            .Include(x => x.Address)
+            .Include(x => x.ReleaseDateTimeUtc)
+            .Include(x => x.CreatedAtUtc);
 
         var list = await _collection
             .Find(filter)
+            .Project<ReleaseSubmission>(projection)
             .SortByDescending(x => x.CreatedAtUtc)
             .ToListAsync();
 

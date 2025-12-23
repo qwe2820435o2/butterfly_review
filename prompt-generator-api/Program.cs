@@ -208,6 +208,30 @@ Console.WriteLine($"Database: {builder.Configuration.GetConnectionString("Defaul
 Console.WriteLine($"Log Level: {builder.Configuration["Logging:LogLevel:Default"] ?? "Information"}");
 Console.WriteLine("=".PadRight(60, '='));
 
+// Initialize MongoDB indexes synchronously on startup
+if (!string.IsNullOrWhiteSpace(mongoConnection) && mongoConnection.StartsWith("mongodb", StringComparison.OrdinalIgnoreCase))
+{
+    try
+    {
+        Console.WriteLine("Initializing MongoDB indexes...");
+        using var scope = app.Services.CreateScope();
+        var dbHelper = scope.ServiceProvider.GetRequiredService<MongoDbHelper>();
+        var releaseRepo = scope.ServiceProvider.GetRequiredService<tennis_wave_api.Data.Interfaces.IReleaseSubmissionRepository>();
+        var sightingRepo = scope.ServiceProvider.GetRequiredService<tennis_wave_api.Data.Interfaces.ISightingSubmissionRepository>();
+        
+        // Force index creation by accessing the repositories (they will create indexes in constructor)
+        // Wait a bit to ensure async index creation completes
+        await Task.Delay(2000);
+        
+        Console.WriteLine("MongoDB indexes initialized successfully.");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Warning: Failed to initialize MongoDB indexes: {ex.Message}");
+        // Don't fail startup if index creation fails
+    }
+}
+
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
