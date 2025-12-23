@@ -100,15 +100,68 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.Configure<MongoDbSettings>(
     builder.Configuration.GetSection(MongoDbSettings.SectionName));
 
-// Optional: Register MongoDB client if configured
-var mongoConnection = builder.Configuration.GetConnectionString("DefaultConnection");
+// Get MongoDB connection string from multiple sources
 var mongoDbSettings = builder.Configuration.GetSection(MongoDbSettings.SectionName).Get<MongoDbSettings>();
+var mongoConnection = string.Empty;
 
-if (!string.IsNullOrWhiteSpace(mongoConnection) && mongoConnection.StartsWith("mongodb"))
+// Priority 1: Check MongoDb:ConnectionString configuration
+if (!string.IsNullOrWhiteSpace(mongoDbSettings?.ConnectionString))
+{
+    mongoConnection = mongoDbSettings.ConnectionString;
+    Log.Information("MongoDB connection string found in MongoDb:ConnectionString configuration");
+}
+// Priority 2: Check environment variable MongoDb__ConnectionString
+else if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("MongoDb__ConnectionString")))
+{
+    mongoConnection = Environment.GetEnvironmentVariable("MongoDb__ConnectionString")!;
+    Log.Information("MongoDB connection string found in MongoDb__ConnectionString environment variable");
+}
+// Priority 3: Check ConnectionStrings__DefaultConnection environment variable
+else if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")))
+{
+    var defaultConnection = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
+    if (!string.IsNullOrWhiteSpace(defaultConnection) && defaultConnection.StartsWith("mongodb", StringComparison.OrdinalIgnoreCase))
+    {
+        mongoConnection = defaultConnection;
+        Log.Information("MongoDB connection string found in ConnectionStrings__DefaultConnection environment variable");
+    }
+}
+// Priority 4: Check DefaultConnection from configuration if it's a MongoDB connection string
+else
+{
+    var defaultConnection = builder.Configuration.GetConnectionString("DefaultConnection");
+    if (!string.IsNullOrWhiteSpace(defaultConnection) && defaultConnection.StartsWith("mongodb", StringComparison.OrdinalIgnoreCase))
+    {
+        mongoConnection = defaultConnection;
+        Log.Information("MongoDB connection string found in DefaultConnection configuration");
+    }
+}
+
+// Always register MongoDB client and helper to avoid dependency injection errors
+if (!string.IsNullOrWhiteSpace(mongoConnection) && mongoConnection.StartsWith("mongodb", StringComparison.OrdinalIgnoreCase))
 {
     builder.Services.AddSingleton<IMongoClient>(_ => new MongoClient(mongoConnection));
     builder.Services.AddScoped<MongoDbHelper>(provider => 
         new MongoDbHelper(provider.GetRequiredService<IMongoClient>(), mongoDbSettings ?? new MongoDbSettings()));
+    
+    Log.Information("MongoDB client registered successfully. Connection string: {ConnectionString}", 
+        mongoConnection.Substring(0, Math.Min(30, mongoConnection.Length)) + "...");
+}
+else
+{
+    // Register with a placeholder connection string to avoid DI errors
+    // This will allow the app to start, but MongoDB operations will fail at runtime
+    Log.Warning("⚠️ MongoDB connection string not found! Using placeholder connection. " +
+                "Please configure one of the following environment variables: " +
+                "MongoDb__ConnectionString or ConnectionStrings__DefaultConnection. " +
+                "MongoDB operations will fail until connection string is configured.");
+    
+    // Use a placeholder that will fail at runtime with a clear error message
+    builder.Services.AddSingleton<IMongoClient>(_ => new MongoClient("mongodb://placeholder:27017"));
+    builder.Services.AddScoped<MongoDbHelper>(provider => 
+        new MongoDbHelper(provider.GetRequiredService<IMongoClient>(), mongoDbSettings ?? new MongoDbSettings()));
+    
+    Log.Warning("MongoDB services registered with placeholder connection. Configure connection string to enable MongoDB operations.");
 }
 
 // Add Controllers
