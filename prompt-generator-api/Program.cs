@@ -207,4 +207,11 @@ app.UseAuthorization();
 // Add Router
 app.MapControllers();
 
+// Configure port for Railway deployment
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrEmpty(port))
+{
+    app.Urls.Add($"http://0.0.0.0:{port}");
+}
+
 app.Run();
