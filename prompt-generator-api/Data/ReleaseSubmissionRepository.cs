@@ -12,10 +12,63 @@ namespace tennis_wave_api.Data;
 public class ReleaseSubmissionRepository : IReleaseSubmissionRepository
 {
     private readonly IMongoCollection<ReleaseSubmission> _collection;
+    private readonly MongoDbHelper _dbHelper;
 
     public ReleaseSubmissionRepository(MongoDbHelper dbHelper)
     {
+        _dbHelper = dbHelper;
         _collection = dbHelper.GetConfiguredCollection<ReleaseSubmission>();
+        
+        // Initialize indexes asynchronously (fire and forget)
+        _ = InitializeIndexesAsync();
+    }
+
+    /// <summary>
+    /// Initialize indexes for optimal query performance
+    /// </summary>
+    private async Task InitializeIndexesAsync()
+    {
+        try
+        {
+            var indexes = new List<CreateIndexModel<ReleaseSubmission>>
+            {
+                // Index for CreatedAtUtc range queries (YearInReview API)
+                new CreateIndexModel<ReleaseSubmission>(
+                    Builders<ReleaseSubmission>.IndexKeys.Ascending(x => x.CreatedAtUtc),
+                    new CreateIndexOptions { Name = "idx_createdAtUtc" }),
+
+                // Compound index for coordinates query with sorting (Trajectories/all API)
+                // This index supports: Latitude != null && Longitude != null, sorted by CreatedAtUtc DESC
+                new CreateIndexModel<ReleaseSubmission>(
+                    Builders<ReleaseSubmission>.IndexKeys
+                        .Ascending(x => x.Latitude)
+                        .Ascending(x => x.Longitude)
+                        .Descending(x => x.CreatedAtUtc),
+                    new CreateIndexOptions { Name = "idx_lat_lng_createdAt" }),
+
+                // Index for Email queries
+                new CreateIndexModel<ReleaseSubmission>(
+                    Builders<ReleaseSubmission>.IndexKeys.Ascending(x => x.Email),
+                    new CreateIndexOptions { Name = "idx_email" }),
+
+                // Index for TagNumber queries
+                new CreateIndexModel<ReleaseSubmission>(
+                    Builders<ReleaseSubmission>.IndexKeys.Ascending(x => x.TagNumber),
+                    new CreateIndexOptions { Name = "idx_tagNumber" }),
+
+                // Unique index for SubmissionId (if not already exists)
+                new CreateIndexModel<ReleaseSubmission>(
+                    Builders<ReleaseSubmission>.IndexKeys.Ascending(x => x.SubmissionId),
+                    new CreateIndexOptions { Name = "idx_submissionId_unique", Unique = true })
+            };
+
+            await _dbHelper.CreateIndexesIfNotExistAsync(_collection, indexes.ToArray());
+        }
+        catch (Exception ex)
+        {
+            // Log error but don't throw - app should still work without indexes
+            Console.WriteLine($"Warning: Failed to create indexes for ReleaseSubmission: {ex.Message}");
+        }
     }
 
     public async Task<ReleaseSubmission?> GetByIdAsync(string id)
