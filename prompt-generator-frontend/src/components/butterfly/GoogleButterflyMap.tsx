@@ -14,6 +14,7 @@ interface MapPoint {
   lat: number;
   lng: number;
   label: string;
+  address?: string; // Address for geocoding (priority over lat/lng)
   description?: string;
   type: "release" | "sighting";
   date?: string;
@@ -50,44 +51,111 @@ export default function GoogleButterflyMap({
 }: GoogleButterflyMapProps) {
   const [selectedPoint, setSelectedPoint] = useState<MapPoint | null>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
+  const [geocodedPoints, setGeocodedPoints] = useState<{
+    release?: MapPoint;
+    sightings: MapPoint[];
+  }>({ sightings: [] });
 
-  // Load Google Maps script
+  // Load Google Maps script (Geocoding is part of the core API, no need to load separately)
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: apiKey,
+    libraries: ['places'],
   });
 
-  // Calculate center point
-  const center = useMemo(() => {
-    if (releasePoint) {
-      return { lat: releasePoint.lat, lng: releasePoint.lng };
+  // Geocode address to coordinates (priority: address > lat/lng)
+  const geocodeAddress = useCallback(async (point: MapPoint): Promise<MapPoint> => {
+    // If address is available, use geocoding
+    if (point.address && isLoaded && typeof google !== 'undefined') {
+      try {
+        const geocoder = new google.maps.Geocoder();
+        const result = await new Promise<google.maps.GeocoderResult[]>((resolve, reject) => {
+          geocoder.geocode(
+            { address: point.address },
+            (results, status) => {
+              if (status === 'OK' && results && results.length > 0) {
+                resolve(results);
+              } else {
+                reject(new Error(`Geocoding failed: ${status}`));
+              }
+            }
+          );
+        });
+
+        const location = result[0].geometry.location;
+        return {
+          ...point,
+          lat: location.lat(),
+          lng: location.lng(),
+        };
+      } catch (error) {
+        console.warn(`Geocoding failed for address "${point.address}", using provided coordinates:`, error);
+        // Fall back to provided lat/lng
+        return point;
+      }
     }
-    if (sightingPoints.length > 0) {
-      const first = sightingPoints[0];
+    // If no address, use provided lat/lng
+    return point;
+  }, [isLoaded]);
+
+  // Geocode all points when data is loaded
+  useEffect(() => {
+    if (!isLoaded || typeof google === 'undefined') return;
+
+    const geocodeAllPoints = async () => {
+      const geocodedRelease = releasePoint ? await geocodeAddress(releasePoint) : undefined;
+      const geocodedSightings = await Promise.all(
+        sightingPoints.map(point => geocodeAddress(point))
+      );
+
+      setGeocodedPoints({
+        release: geocodedRelease,
+        sightings: geocodedSightings,
+      });
+    };
+
+    geocodeAllPoints();
+  }, [isLoaded, releasePoint, sightingPoints, geocodeAddress]);
+
+  // Calculate center point (use geocoded points if available)
+  const center = useMemo(() => {
+    const release = geocodedPoints.release || releasePoint;
+    const sightings = geocodedPoints.sightings.length > 0 ? geocodedPoints.sightings : sightingPoints;
+    
+    if (release) {
+      return { lat: release.lat, lng: release.lng };
+    }
+    if (sightings.length > 0) {
+      const first = sightings[0];
       return { lat: first.lat, lng: first.lng };
     }
     return defaultCenter;
-  }, [releasePoint, sightingPoints]);
+  }, [geocodedPoints, releasePoint, sightingPoints]);
 
-  // Create trajectory path (from release to all sightings in order)
+  // Create trajectory path (from release to all sightings in order, use geocoded points)
   const trajectoryPath = useMemo(() => {
     const path: google.maps.LatLngLiteral[] = [];
+    const release = geocodedPoints.release || releasePoint;
+    const sightings = geocodedPoints.sightings.length > 0 ? geocodedPoints.sightings : sightingPoints;
     
-    if (releasePoint) {
-      path.push({ lat: releasePoint.lat, lng: releasePoint.lng });
+    if (release) {
+      path.push({ lat: release.lat, lng: release.lng });
     }
     
-    sightingPoints.forEach((point) => {
+    sightings.forEach((point) => {
       path.push({ lat: point.lat, lng: point.lng });
     });
     
     return path;
-  }, [releasePoint, sightingPoints]);
+  }, [geocodedPoints, releasePoint, sightingPoints]);
 
-  // Calculate bounds to fit all points
+  // Calculate bounds to fit all points (use geocoded points)
   const bounds = useMemo(() => {
+    const release = geocodedPoints.release || releasePoint;
+    const sightings = geocodedPoints.sightings.length > 0 ? geocodedPoints.sightings : sightingPoints;
+    
     const allPoints = [
-      ...(releasePoint ? [{ lat: releasePoint.lat, lng: releasePoint.lng }] : []),
-      ...sightingPoints.map(p => ({ lat: p.lat, lng: p.lng }))
+      ...(release ? [{ lat: release.lat, lng: release.lng }] : []),
+      ...sightings.map(p => ({ lat: p.lat, lng: p.lng }))
     ];
 
     if (allPoints.length === 0) return null;
@@ -101,7 +169,7 @@ export default function GoogleButterflyMap({
       east: Math.max(...lngs),
       west: Math.min(...lngs),
     };
-  }, [releasePoint, sightingPoints]);
+  }, [geocodedPoints, releasePoint, sightingPoints]);
 
   // Fit bounds when map is ready
   useEffect(() => {
@@ -203,18 +271,21 @@ export default function GoogleButterflyMap({
           zoomControl: true,
         }}
       >
-        {/* Release Point Marker (Red) */}
-        {releasePoint && (
-          <Marker
-            position={{ lat: releasePoint.lat, lng: releasePoint.lng }}
-            icon={createMarkerIcon("red")}
-            onClick={() => setSelectedPoint(releasePoint)}
-            title={releasePoint.label}
-          />
-        )}
+        {/* Release Point Marker (Red) - Use geocoded point if available */}
+        {(geocodedPoints.release || releasePoint) && (() => {
+          const point = geocodedPoints.release || releasePoint!;
+          return (
+            <Marker
+              position={{ lat: point.lat, lng: point.lng }}
+              icon={createMarkerIcon("red")}
+              onClick={() => setSelectedPoint(point)}
+              title={point.label}
+            />
+          );
+        })()}
 
-        {/* Sighting Points Markers (Blue) */}
-        {sightingPoints.map((point, index) => (
+        {/* Sighting Points Markers (Blue) - Use geocoded points if available */}
+        {(geocodedPoints.sightings.length > 0 ? geocodedPoints.sightings : sightingPoints).map((point, index) => (
           <Marker
             key={`sighting-${index}`}
             position={{ lat: point.lat, lng: point.lng }}

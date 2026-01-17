@@ -32,6 +32,7 @@ interface MapPoint {
   lat: number;
   lng: number;
   label: string;
+  address?: string; // Address for geocoding (priority over lat/lng)
   description?: string;
   type: "release" | "sighting";
   date?: string;
@@ -88,13 +89,14 @@ export default function TrajectoryPage() {
     }
   };
 
-  // Convert data to map points
+  // Convert data to map points (include address for geocoding)
   const getMapPoints = (): { releasePoint?: MapPoint; sightingPoints: MapPoint[] } => {
-    const releasePoint: MapPoint | undefined = release && release.latitude && release.longitude
+    const releasePoint: MapPoint | undefined = release && (release.address || (release.latitude && release.longitude))
       ? {
-          lat: release.latitude,
-          lng: release.longitude,
+          lat: release.latitude || 0, // Will be updated by geocoding if address is available
+          lng: release.longitude || 0,
           label: release.address || `Release Point`,
+          address: release.address, // Include address for geocoding
           description: release.notes,
           type: "release",
           date: release.releaseDatePretty || formatDate(release.releaseDateTimeUtc)
@@ -102,11 +104,12 @@ export default function TrajectoryPage() {
       : undefined;
 
     const sightingPoints: MapPoint[] = sightings
-      .filter(s => s.latitude && s.longitude)
+      .filter(s => s.address || (s.latitude && s.longitude))
       .map((sighting, index) => ({
-        lat: sighting.latitude!,
-        lng: sighting.longitude!,
+        lat: sighting.latitude || 0, // Will be updated by geocoding if address is available
+        lng: sighting.longitude || 0,
         label: sighting.address || `Sighting Point ${index + 1}`,
+        address: sighting.address, // Include address for geocoding
         description: sighting.condition,
         type: "sighting" as const,
         date: sighting.sightingDatePretty || formatDate(sighting.sightingDateTimeUtc)
