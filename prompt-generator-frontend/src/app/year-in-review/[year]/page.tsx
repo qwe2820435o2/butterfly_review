@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Loader2, Sparkles, Calendar, Eye, Users, MapPin, TrendingUp, AlertCircle, Clock } from "lucide-react";
+import { ArrowLeft, Sparkles, Calendar, Eye, Users, MapPin, TrendingUp, AlertCircle, Clock } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { showLoading, hideLoading } from "@/store/slices/loadingSlice";
 import { toast } from "sonner";
@@ -82,7 +82,6 @@ export default function YearInReviewPage() {
         <div className="container mx-auto px-4 py-16">
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
-              <Loader2 className="w-12 h-12 animate-spin text-orange-600 mx-auto mb-4" />
               <p className="text-gray-600 dark:text-gray-300">Loading year in review...</p>
             </div>
           </div>

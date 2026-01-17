@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, MapPin, ArrowLeft, AlertCircle } from "lucide-react";
+import { MapPin, ArrowLeft, AlertCircle } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { showLoading, hideLoading } from "@/store/slices/loadingSlice";
 import { toast } from "sonner";
@@ -74,7 +74,6 @@ export default function MapOverviewPage() {
         <div className="container mx-auto px-4 py-16">
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
-              <Loader2 className="w-12 h-12 animate-spin text-orange-600 mx-auto mb-4" />
               <p className="text-gray-600 dark:text-gray-300">Loading trajectories...</p>
             </div>
           </div>
@@ -148,7 +147,6 @@ export default function MapOverviewPage() {
             ) : (
               <div className="h-[600px] w-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg">
                 <div className="text-center">
-                  <Loader2 className="w-8 h-8 animate-spin text-orange-600 mx-auto mb-2" />
                   <p className="text-gray-500 dark:text-gray-400">Loading map...</p>
                 </div>
               </div>

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Loader2, MapPin, Calendar, Eye, Clock, AlertCircle } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, Eye, Clock, AlertCircle } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { showLoading, hideLoading } from "@/store/slices/loadingSlice";
 import { toast } from "sonner";
@@ -22,7 +22,7 @@ const GoogleButterflyMap = dynamic(
     ssr: false,
     loading: () => (
       <div className="h-[600px] w-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg">
-        <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
+        <p className="text-gray-500 dark:text-gray-400">Loading map...</p>
       </div>
     )
   }
@@ -186,7 +186,6 @@ export default function TrajectoryPage() {
         <div className="container mx-auto px-4 py-16">
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
-              <Loader2 className="w-12 h-12 animate-spin text-orange-600 mx-auto mb-4" />
               <p className="text-gray-600 dark:text-gray-300">Loading trajectory data...</p>
             </div>
           </div>
