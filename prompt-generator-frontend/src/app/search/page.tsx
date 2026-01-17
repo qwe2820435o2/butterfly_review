@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, AlertCircle, Sparkles } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Search, AlertCircle, Sparkles, Eye } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { showLoading, hideLoading } from "@/store/slices/loadingSlice";
 import { toast } from "sonner";
@@ -16,6 +17,7 @@ export default function SearchPage() {
   const [searchResults, setSearchResults] = useState<TagNumberSummary[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [showSightingTagsDialog, setShowSightingTagsDialog] = useState(false);
   const dispatch = useDispatch();
 
   /**
@@ -127,12 +129,73 @@ export default function SearchPage() {
                       Found {searchResults.length} tag(s)
                     </h2>
                     <p className="text-lg text-gray-700 dark:text-gray-200 mb-2">
-                      Total sighting count: {searchResults.reduce((sum, result) => sum + result.sightingCount, 0)}
+                      Total sighting count:{" "}
+                      <button
+                        onClick={() => setShowSightingTagsDialog(true)}
+                        className="text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 font-semibold underline underline-offset-2 cursor-pointer transition-colors"
+                      >
+                        {searchResults.reduce((sum, result) => sum + result.sightingCount, 0)}
+                      </button>
                     </p>
                     <p className="text-gray-600 dark:text-gray-300">
                       Click the "View Trajectory" button to see the complete flight path on the map
                     </p>
                   </div>
+
+                  {/* Sighting Tags Dialog */}
+                  <Dialog open={showSightingTagsDialog} onOpenChange={setShowSightingTagsDialog}>
+                    <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                          <Eye className="w-5 h-5" />
+                          Tags with Sightings
+                        </DialogTitle>
+                        <DialogDescription>
+                          All tags with their sighting counts (sorted by sighting count, descending)
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="mt-4">
+                        {searchResults
+                          .filter(result => result.sightingCount > 0)
+                          .sort((a, b) => b.sightingCount - a.sightingCount)
+                          .map((result) => (
+                            <div
+                              key={result.tagNumber}
+                              className="flex items-center justify-between p-3 mb-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                            >
+                              <div className="flex-1">
+                                <div className="font-semibold text-gray-900 dark:text-white">
+                                  {result.tagNumber}
+                                </div>
+                                {result.releaseDatePretty && (
+                                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                                    Released: {result.releaseDatePretty}
+                                  </div>
+                                )}
+                                {result.lastSightingDatePretty && (
+                                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                                    Last sighting: {result.lastSightingDatePretty}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="ml-4 text-right">
+                                <div className="text-lg font-bold text-orange-600 dark:text-orange-400">
+                                  {result.sightingCount}
+                                </div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                  {result.sightingCount === 1 ? "sighting" : "sightings"}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        {searchResults.filter(result => result.sightingCount > 0).length === 0 && (
+                          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                            No tags with sightings found.
+                          </div>
+                        )}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {searchResults.map((summary) => (
