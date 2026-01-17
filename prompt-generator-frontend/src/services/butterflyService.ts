@@ -133,7 +133,7 @@ export const butterflyService = {
         }
       });
 
-      // Group sightings by tag number and sort by date
+      // Group sightings by tag number (from this email) and sort by date
       const sightingsByTag = new Map<string, SightingSubmission[]>();
       sightings.forEach(sighting => {
         const tagNumber = sighting.tagNumber;
@@ -152,27 +152,60 @@ export const butterflyService = {
         });
       });
 
+      // Get all unique tag numbers from releases
+      const allTagNumbers = Array.from(releasesByTag.keys());
+
+      // Fetch all sightings for each tag number (not limited to this email)
+      // This ensures we get the correct total sighting count
+      const allSightingsByTag = new Map<string, SightingSubmission[]>();
+      await Promise.all(
+        allTagNumbers.map(async (tagNumber) => {
+          try {
+            const allSightings = await this.getSightingSubmissionsByTagNumber(tagNumber, false);
+            // Sort by date
+            allSightings.sort((a, b) => {
+              const dateA = a.sightingDateTimeUtc ? new Date(a.sightingDateTimeUtc).getTime() : 0;
+              const dateB = b.sightingDateTimeUtc ? new Date(b.sightingDateTimeUtc).getTime() : 0;
+              return dateA - dateB;
+            });
+            allSightingsByTag.set(tagNumber, allSightings);
+          } catch (error) {
+            console.error(`Error fetching all sightings for tag ${tagNumber}:`, error);
+            // If error, fall back to email-specific sightings
+            allSightingsByTag.set(tagNumber, sightingsByTag.get(tagNumber) || []);
+          }
+        })
+      );
+
       // Build summary for each tag number
       const summaries: TagNumberSummary[] = [];
 
       releasesByTag.forEach((release, tagNumber) => {
+        // Use sightings from this email for lastSightingDate calculation
         const tagSightings = sightingsByTag.get(tagNumber) || [];
         const lastSighting = tagSightings.length > 0 ? tagSightings[tagSightings.length - 1] : null;
 
-        const status = getButterflyStatus(release, tagSightings);
+        // Use all sightings (from all emails) for total count
+        const allTagSightings = allSightingsByTag.get(tagNumber) || [];
+        // Find the actual last sighting from all sightings (not just this email)
+        const actualLastSighting = allTagSightings.length > 0 
+          ? allTagSightings[allTagSightings.length - 1] 
+          : null;
+
+        const status = getButterflyStatus(release, allTagSightings);
         const survivalDays = calculateSurvivalDays(
           release.releaseDateTimeUtc,
-          lastSighting?.sightingDateTimeUtc
+          actualLastSighting?.sightingDateTimeUtc
         );
 
         summaries.push({
           tagNumber: tagNumber,
           releaseDate: release.releaseDateTimeUtc,
           releaseDatePretty: release.releaseDatePretty,
-          lastSightingDate: lastSighting?.sightingDateTimeUtc,
-          lastSightingDatePretty: lastSighting?.sightingDatePretty,
+          lastSightingDate: actualLastSighting?.sightingDateTimeUtc,
+          lastSightingDatePretty: actualLastSighting?.sightingDatePretty,
           status: status,
-          sightingCount: tagSightings.length,
+          sightingCount: allTagSightings.length, // Use total count from all sightings
           survivalDays: survivalDays,
           releaseLocation: release.latitude && release.longitude ? {
             latitude: release.latitude,
