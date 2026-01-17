@@ -215,11 +215,36 @@ export const butterflyService = {
         });
       });
 
-      // Sort summaries by release date (newest first)
+      // Sort summaries by tag number (descending: largest to smallest)
+      // Example: WAA148 > WAA147 > ... > WAA120
       summaries.sort((a, b) => {
-        const dateA = a.releaseDate ? new Date(a.releaseDate).getTime() : 0;
-        const dateB = b.releaseDate ? new Date(b.releaseDate).getTime() : 0;
-        return dateB - dateA;
+        const tagA = a.tagNumber || '';
+        const tagB = b.tagNumber || '';
+        
+        // Extract numeric part from tag number (e.g., "WAA148" -> 148)
+        const extractNumber = (tag: string): number => {
+          const match = tag.match(/\d+/);
+          return match ? parseInt(match[0], 10) : 0;
+        };
+        
+        // Extract prefix (letters) from tag number (e.g., "WAA148" -> "WAA")
+        const extractPrefix = (tag: string): string => {
+          const match = tag.match(/^[A-Za-z]+/);
+          return match ? match[0].toUpperCase() : '';
+        };
+        
+        const prefixA = extractPrefix(tagA);
+        const prefixB = extractPrefix(tagB);
+        const numA = extractNumber(tagA);
+        const numB = extractNumber(tagB);
+        
+        // First compare by prefix (alphabetically)
+        if (prefixA !== prefixB) {
+          return prefixB.localeCompare(prefixA);
+        }
+        
+        // If prefix is same, compare by number (descending: larger number first)
+        return numB - numA;
       });
 
       return summaries;
