@@ -239,6 +239,7 @@ export interface YearInReview {
   uniqueVolunteers: number;
   uniqueRegions: number;
   totalFlightDistanceKm: number;
+  averageFlightDistanceKm?: number;
   averageDaysToFirstSighting?: number;
   releaseLocationsCount: number;
   sightingLocationsCount: number;

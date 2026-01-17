@@ -11,14 +11,16 @@ public class YearInReviewDto
     public int Year { get; set; }
 
     /// <summary>
-    /// Overview statistics
+    /// Overview statistics (deprecated, use flattened properties instead)
     /// </summary>
-    public OverviewStatisticsDto Overview { get; set; } = new();
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public OverviewStatisticsDto? Overview { get; set; }
 
     /// <summary>
     /// Geographic distribution data
     /// </summary>
-    public GeographicDistributionDto GeographicDistribution { get; set; } = new();
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public GeographicDistributionDto? GeographicDistribution { get; set; }
 
     // Flattened properties for backward compatibility
     /// <summary>
@@ -45,6 +47,11 @@ public class YearInReviewDto
     /// Total flight distance in kilometers (sum of all trajectories)
     /// </summary>
     public double TotalFlightDistanceKm { get; set; }
+
+    /// <summary>
+    /// Average flight distance in kilometers (total distance / butterflies released count)
+    /// </summary>
+    public double? AverageFlightDistanceKm { get; set; }
 
     /// <summary>
     /// Average days to first sighting
@@ -116,6 +123,11 @@ public class OverviewStatisticsDto
     /// Total flight distance in kilometers (sum of all trajectories)
     /// </summary>
     public double TotalFlightDistanceKm { get; set; }
+
+    /// <summary>
+    /// Average flight distance in kilometers (total distance / butterflies released count)
+    /// </summary>
+    public double? AverageFlightDistanceKm { get; set; }
 
     /// <summary>
     /// Survival rate percentage (alive butterflies / total released)

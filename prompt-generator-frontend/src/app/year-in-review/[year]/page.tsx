@@ -316,6 +316,35 @@ export default function YearInReviewPage() {
                 </CardContent>
               </Card>
             </ScrollReveal>
+
+            {/* Average Flight Distance */}
+            <ScrollReveal direction="up" delay={700}>
+              <Card className="shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-l-pink-500">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <TrendingUp className="w-5 h-5 text-pink-600" />
+                    <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Average Flight Distance</CardTitle>
+                  </div>
+                  <div className="text-3xl font-bold text-pink-600 dark:text-pink-400 mb-1">
+                    {data.averageFlightDistanceKm !== undefined && data.averageFlightDistanceKm !== null ? (
+                      <>
+                        <AnimatedNumber 
+                          value={data.averageFlightDistanceKm} 
+                          duration={1500} 
+                          decimals={1}
+                        />
+                        <span className="text-lg ml-1">km</span>
+                      </>
+                    ) : (
+                      <span className="text-lg">N/A</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-500">
+                    Average distance per butterfly
+                  </p>
+                </CardContent>
+              </Card>
+            </ScrollReveal>
           </div>
         </div>
       </section>

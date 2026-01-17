@@ -63,13 +63,16 @@ public class YearInReviewController : ControllerBase
                 UniqueVolunteers = statistics.UniqueVolunteers,
                 UniqueRegions = statistics.UniqueRegions,
                 TotalFlightDistanceKm = statistics.TotalFlightDistanceKm,
+                AverageFlightDistanceKm = statistics.AverageFlightDistanceKm,
                 AverageDaysToFirstSighting = statistics.AverageDaysToFirstSighting,
                 ReleaseLocationsCount = statistics.ReleaseLocationsCount,
                 SightingLocationsCount = statistics.SightingLocationsCount,
                 MostActiveReleaseLocationAddress = statistics.MostActiveReleaseLocationAddress,
                 MostActiveReleaseLocationCount = statistics.MostActiveReleaseLocationCount,
                 MostActiveSightingLocationAddress = statistics.MostActiveSightingLocationAddress,
-                MostActiveSightingLocationCount = statistics.MostActiveSightingLocationCount
+                MostActiveSightingLocationCount = statistics.MostActiveSightingLocationCount,
+                GeographicDistribution = geographicDistribution,
+                Overview = null // Explicitly set to null to avoid serialization
             };
 
             return Ok(ApiResponseHelper.Success(yearInReview, $"Year {year} in review data generated successfully"));
@@ -141,34 +144,51 @@ public class YearInReviewController : ControllerBase
                     .OrderByDescending(r => r.ReleaseDateTimeUtc ?? DateTime.MinValue)
                     .First();
 
-                var firstSighting = tagSightings.First();
+                var firstSightingForDays = tagSightings.First();
 
-                if (latestRelease.ReleaseDateTimeUtc.HasValue && firstSighting.SightingDateTimeUtc.HasValue)
+                if (latestRelease.ReleaseDateTimeUtc.HasValue && firstSightingForDays.SightingDateTimeUtc.HasValue)
                 {
-                    var days = (int)(firstSighting.SightingDateTimeUtc.Value - latestRelease.ReleaseDateTimeUtc.Value).TotalDays;
+                    var days = (int)(firstSightingForDays.SightingDateTimeUtc.Value - latestRelease.ReleaseDateTimeUtc.Value).TotalDays;
                     if (days >= 0)
                     {
                         daysToFirstSightingList.Add(days);
                     }
                 }
 
-                // Calculate total distance
+                // Calculate total distance for this butterfly
+                // Trajectory: Release -> First Sighting -> Second Sighting -> ...
                 if (latestRelease.Latitude.HasValue && latestRelease.Longitude.HasValue)
                 {
-                    foreach (var sighting in tagSightings)
+                    var butterflyDistance = 0.0;
+                    var validSightings = tagSightings
+                        .Where(s => s.Latitude.HasValue && s.Longitude.HasValue)
+                        .OrderBy(s => s.SightingDateTimeUtc ?? DateTime.MinValue)
+                        .ToList();
+                    
+                    if (validSightings.Count > 0)
                     {
-                        if (sighting.Latitude.HasValue && sighting.Longitude.HasValue)
+                        // Calculate distance from release to first sighting
+                        var firstSightingPoint = validSightings[0];
+                        butterflyDistance += CalculateHaversineDistance(
+                            latestRelease.Latitude.Value,
+                            latestRelease.Longitude.Value,
+                            firstSightingPoint.Latitude!.Value,
+                            firstSightingPoint.Longitude!.Value);
+                        
+                        // Calculate distances between consecutive sightings
+                        for (int i = 0; i < validSightings.Count - 1; i++)
                         {
-                            var lat = sighting.Latitude.Value;
-                            var lng = sighting.Longitude.Value;
-
-                            var distance = CalculateHaversineDistance(
-                                latestRelease.Latitude.Value,
-                                latestRelease.Longitude.Value,
-                                lat,
-                                lng);
-                            totalDistance += distance;
+                            var current = validSightings[i];
+                            var next = validSightings[i + 1];
+                            
+                            butterflyDistance += CalculateHaversineDistance(
+                                current.Latitude!.Value,
+                                current.Longitude!.Value,
+                                next.Latitude!.Value,
+                                next.Longitude!.Value);
                         }
+                        
+                        totalDistance += butterflyDistance;
                     }
                 }
             }
@@ -179,6 +199,11 @@ public class YearInReviewController : ControllerBase
             ? daysToFirstSightingList.Average()
             : null;
 
+        // Calculate average flight distance (total distance / butterflies released count)
+        double? averageFlightDistanceKm = releases.Count > 0
+            ? totalDistance / releases.Count
+            : null;
+
         return new OverviewStatisticsDto
         {
             TotalReleases = releases.Count,
@@ -186,6 +211,7 @@ public class YearInReviewController : ControllerBase
             UniqueVolunteers = uniqueVolunteers.Count,
             UniqueRegions = uniqueRegions.Count,
             TotalFlightDistanceKm = totalDistance,
+            AverageFlightDistanceKm = averageFlightDistanceKm,
             AverageDaysToFirstSighting = averageDaysToFirstSighting,
             ReleaseLocationsCount = geographicDistribution.ReleaseLocations.Count,
             SightingLocationsCount = geographicDistribution.SightingLocations.Count,
