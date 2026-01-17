@@ -126,6 +126,9 @@ export default function SearchPage() {
                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
                       Found {searchResults.length} tag(s)
                     </h2>
+                    <p className="text-lg text-gray-700 dark:text-gray-200 mb-2">
+                      Total sighting count: {searchResults.reduce((sum, result) => sum + result.sightingCount, 0)}
+                    </p>
                     <p className="text-gray-600 dark:text-gray-300">
                       Click the "View Trajectory" button to see the complete flight path on the map
                     </p>
