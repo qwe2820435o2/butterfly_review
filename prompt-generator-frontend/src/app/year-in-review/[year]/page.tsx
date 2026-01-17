@@ -4,8 +4,9 @@ import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Loader2, Sparkles, Calendar, Eye, Users, MapPin, TrendingUp, Award, AlertCircle, Clock } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, Loader2, Sparkles, Calendar, Eye, Users, MapPin, TrendingUp, AlertCircle, Clock } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { showLoading, hideLoading } from "@/store/slices/loadingSlice";
 import { toast } from "sonner";
@@ -20,45 +21,58 @@ export default function YearInReviewPage() {
   const params = useParams();
   const router = useRouter();
   const dispatch = useDispatch();
-  const year = params.year ? parseInt(params.year as string) : new Date().getFullYear();
+  const currentYear = new Date().getFullYear();
+  const year = params.year ? parseInt(params.year as string) : currentYear;
 
   const [data, setData] = useState<YearInReview | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Generate year options (from 2020 to current year, or earlier if needed)
+  const startYear = 2020;
+  const yearOptions = Array.from({ length: currentYear - startYear + 1 }, (_, i) => currentYear - i);
+
   useEffect(() => {
-    if (year && year >= 2000 && year <= 2100) {
-      loadYearInReview();
-    } else {
-      setError("Invalid year");
-      setIsLoading(false);
-    }
-  }, [year]);
-
-  const loadYearInReview = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      dispatch(showLoading());
-
-      const yearData = await butterflyService.getYearInReview(year);
-      setData(yearData);
-    } catch (err) {
-      console.error("Load year in review error:", err);
-      setError("Failed to load year in review");
-
-      let errorMessage = "Failed to load, please try again later";
-      if (err && typeof err === "object" && "isAxiosError" in err) {
-        const axiosError = err as AxiosError;
-        if (axiosError.response?.status === 404) {
-          errorMessage = "No data found for this year";
-        }
+    const loadYearInReview = async () => {
+      if (!year || year < 2000 || year > 2100) {
+        setError("Invalid year");
+        setIsLoading(false);
+        return;
       }
 
-      toast.error(errorMessage);
-    } finally {
-      setIsLoading(false);
-      dispatch(hideLoading());
+      try {
+        setIsLoading(true);
+        setError(null);
+        dispatch(showLoading());
+
+        const yearData = await butterflyService.getYearInReview(year);
+        setData(yearData);
+      } catch (err) {
+        console.error("Load year in review error:", err);
+        setError("Failed to load year in review");
+
+        let errorMessage = "Failed to load, please try again later";
+        if (err && typeof err === "object" && "isAxiosError" in err) {
+          const axiosError = err as AxiosError;
+          if (axiosError.response?.status === 404) {
+            errorMessage = "No data found for this year";
+          }
+        }
+
+        toast.error(errorMessage);
+      } finally {
+        setIsLoading(false);
+        dispatch(hideLoading());
+      }
+    };
+
+    loadYearInReview();
+  }, [year, dispatch]);
+
+  const handleYearChange = (newYear: string) => {
+    const yearNum = parseInt(newYear);
+    if (yearNum && yearNum >= 2000 && yearNum <= 2100) {
+      router.push(`/year-in-review/${yearNum}`);
     }
   };
 
@@ -122,16 +136,14 @@ export default function YearInReviewPage() {
       {/* Navigation */}
       <div className="sticky top-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-800">
         <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4">
             <Link href="/">
               <Button variant="ghost" size="sm">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Home
               </Button>
             </Link>
-            <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              {year} Year in Review
-            </div>
+
           </div>
         </div>
       </div>
@@ -143,8 +155,23 @@ export default function YearInReviewPage() {
             <div className="text-center">
               <Sparkles className="w-16 h-16 text-orange-500 mx-auto mb-4 animate-pulse" />
               <h1 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white mb-3">
-                {year} Year in Review
+                Year in Review
               </h1>
+              <div className="flex items-center justify-center gap-3 mb-4">
+                <Calendar className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                <Select value={year.toString()} onValueChange={handleYearChange}>
+                  <SelectTrigger className="w-[140px] text-lg font-semibold">
+                    <SelectValue placeholder="Select year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {yearOptions.map((y) => (
+                      <SelectItem key={y} value={y.toString()}>
+                        {y}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
                 A comprehensive overview of butterfly tracking data and achievements
               </p>
