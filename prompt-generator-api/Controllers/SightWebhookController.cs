@@ -144,6 +144,10 @@ public class SightWebhookController : ControllerBase
     [Consumes("multipart/form-data", "application/x-www-form-urlencoded")]
     public IActionResult TestFormCollection([FromForm] IFormCollection form)
     {
+        Console.WriteLine("=== Test Endpoint 1: IFormCollection ===");
+        Console.WriteLine($"Content-Type: {Request.ContentType}");
+        Console.WriteLine($"Form Count: {form?.Count ?? 0}");
+
         _logger.LogInformation("=== Test Endpoint 1: IFormCollection ===");
         _logger.LogInformation("Content-Type: {ContentType}", Request.ContentType);
         _logger.LogInformation("Form Count: {Count}", form?.Count ?? 0);
@@ -160,6 +164,7 @@ public class SightWebhookController : ControllerBase
             foreach (var field in form)
             {
                 var value = field.Value.ToString();
+                Console.WriteLine($"Form Field: {field.Key} = {value}");
                 _logger.LogInformation("Form Field: {Key} = {Value}", field.Key, value);
                 ((Dictionary<string, string>)result["formFields"]!)[field.Key] = value ?? string.Empty;
             }
@@ -168,8 +173,66 @@ public class SightWebhookController : ControllerBase
             if (form.TryGetValue("rawRequest", out var rawRequestValues))
             {
                 var rawRequest = rawRequestValues.ToString();
-                _logger.LogInformation("Found rawRequest: {Length} characters", rawRequest?.Length ?? 0);
+                Console.WriteLine("=== Found rawRequest ===");
+                Console.WriteLine($"rawRequest Length: {rawRequest?.Length ?? 0} characters");
+                
+                _logger.LogInformation("=== Found rawRequest ===");
+                _logger.LogInformation("rawRequest Length: {Length} characters", rawRequest?.Length ?? 0);
+                
+                if (!string.IsNullOrWhiteSpace(rawRequest))
+                {
+                    // Print full rawRequest content
+                    Console.WriteLine("=== rawRequest Full Content ===");
+                    Console.WriteLine(rawRequest);
+                    Console.WriteLine("=== End of rawRequest ===");
+
+                    _logger.LogInformation("=== rawRequest Full Content ===");
+                    _logger.LogInformation("{Content}", rawRequest);
+                    _logger.LogInformation("=== End of rawRequest ===");
+                    
+                    // Try to parse as JSON and log structure
+                    try
+                    {
+                        var jsonDoc = JsonDocument.Parse(rawRequest);
+                        Console.WriteLine("=== rawRequest is valid JSON ===");
+                        Console.WriteLine($"JSON Root Element Type: {jsonDoc.RootElement.ValueKind}");
+                        
+                        _logger.LogInformation("=== rawRequest is valid JSON ===");
+                        _logger.LogInformation("JSON Root Element Type: {Type}", jsonDoc.RootElement.ValueKind);
+                        
+                        // Log all top-level keys
+                        if (jsonDoc.RootElement.ValueKind == JsonValueKind.Object)
+                        {
+                            Console.WriteLine("=== JSON Top-Level Keys ===");
+                            _logger.LogInformation("=== JSON Top-Level Keys ===");
+                            foreach (var prop in jsonDoc.RootElement.EnumerateObject())
+                            {
+                                var propValue = prop.Value.ValueKind == JsonValueKind.String 
+                                    ? prop.Value.GetString() 
+                                    : prop.Value.ToString();
+                                
+                                Console.WriteLine($"Key: {prop.Name}, Value Type: {prop.Value.ValueKind}, Value: {propValue}");
+                                _logger.LogInformation("Key: {Key}, Value Type: {Type}, Value: {Value}", 
+                                    prop.Name, 
+                                    prop.Value.ValueKind,
+                                    propValue);
+                            }
+                        }
+                    }
+                    catch (JsonException ex)
+                    {
+                        Console.WriteLine($"rawRequest is not valid JSON: {ex.Message}");
+                        _logger.LogWarning(ex, "rawRequest is not valid JSON: {Message}", ex.Message);
+                    }
+                }
+                
                 result["rawRequest"] = rawRequest;
+                result["rawRequestLength"] = rawRequest?.Length ?? 0;
+            }
+            else
+            {
+                Console.WriteLine("rawRequest field NOT FOUND in form data!");
+                _logger.LogWarning("rawRequest field NOT FOUND in form data!");
             }
         }
 
@@ -211,8 +274,34 @@ public class SightWebhookController : ControllerBase
             if (Request.Form.TryGetValue("rawRequest", out var rawRequestValues))
             {
                 var rawRequest = rawRequestValues.ToString();
-                _logger.LogInformation("Found rawRequest: {Length} characters", rawRequest?.Length ?? 0);
+                _logger.LogInformation("=== Found rawRequest ===");
+                _logger.LogInformation("rawRequest Length: {Length} characters", rawRequest?.Length ?? 0);
+                
+                if (!string.IsNullOrWhiteSpace(rawRequest))
+                {
+                    // Print full rawRequest content
+                    _logger.LogInformation("=== rawRequest Full Content ===");
+                    _logger.LogInformation("{Content}", rawRequest);
+                    _logger.LogInformation("=== End of rawRequest ===");
+                    
+                    // Try to parse as JSON
+                    try
+                    {
+                        var jsonDoc = JsonDocument.Parse(rawRequest);
+                        _logger.LogInformation("rawRequest is valid JSON, Root Type: {Type}", jsonDoc.RootElement.ValueKind);
+                    }
+                    catch (JsonException ex)
+                    {
+                        _logger.LogWarning(ex, "rawRequest is not valid JSON: {Message}", ex.Message);
+                    }
+                }
+                
                 result["rawRequest"] = rawRequest;
+                result["rawRequestLength"] = rawRequest?.Length ?? 0;
+            }
+            else
+            {
+                _logger.LogWarning("rawRequest field NOT FOUND in Request.Form!");
             }
         }
 
@@ -235,7 +324,24 @@ public class SightWebhookController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(rawRequest))
         {
-            _logger.LogInformation("rawRequest content: {Content}", rawRequest);
+            _logger.LogInformation("=== rawRequest Full Content ===");
+            _logger.LogInformation("{Content}", rawRequest);
+            _logger.LogInformation("=== End of rawRequest ===");
+            
+            // Try to parse as JSON
+            try
+            {
+                var jsonDoc = JsonDocument.Parse(rawRequest);
+                _logger.LogInformation("rawRequest is valid JSON, Root Type: {Type}", jsonDoc.RootElement.ValueKind);
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogWarning(ex, "rawRequest is not valid JSON: {Message}", ex.Message);
+            }
+        }
+        else
+        {
+            _logger.LogWarning("rawRequest is null or empty!");
         }
 
         var result = new Dictionary<string, object?>
@@ -335,11 +441,42 @@ public class SightWebhookController : ControllerBase
         if (Request.HasFormContentType && Request.Form != null)
         {
             _logger.LogInformation("--- Form Data ---");
+            _logger.LogInformation("Form Field Count: {Count}", Request.Form.Count);
+            
             foreach (var field in Request.Form)
             {
                 var value = field.Value.ToString();
-                _logger.LogInformation("Form Field: {Key} = {Value}", field.Key, value);
+                
+                // Special handling for rawRequest - print full content
+                if (field.Key == "rawRequest" && !string.IsNullOrWhiteSpace(value))
+                {
+                    _logger.LogInformation("=== Form Field: {Key} (Length: {Length}) ===", field.Key, value.Length);
+                    _logger.LogInformation("Full Content: {Content}", value);
+                    _logger.LogInformation("=== End of {Key} ===", field.Key);
+                    
+                    // Try to parse as JSON
+                    try
+                    {
+                        var jsonDoc = JsonDocument.Parse(value);
+                        _logger.LogInformation("rawRequest is valid JSON, Root Type: {Type}", jsonDoc.RootElement.ValueKind);
+                    }
+                    catch (JsonException ex)
+                    {
+                        _logger.LogWarning(ex, "rawRequest is not valid JSON: {Message}", ex.Message);
+                    }
+                }
+                else
+                {
+                    _logger.LogInformation("Form Field: {Key} = {Value}", field.Key, value);
+                }
+                
                 ((Dictionary<string, string>)result["formFields"]!)[field.Key] = value ?? string.Empty;
+            }
+            
+            // Check specifically for rawRequest
+            if (!Request.Form.ContainsKey("rawRequest"))
+            {
+                _logger.LogWarning("rawRequest field NOT FOUND in Request.Form!");
             }
         }
 
@@ -365,6 +502,176 @@ public class SightWebhookController : ControllerBase
         }
 
         return Ok(ApiResponseHelper.Success(result, "Test endpoint 5 - All data received"));
+    }
+
+    /// <summary>
+    /// Debug endpoint: Print rawRequest content in detail
+    /// Route: POST /api/sight-webhook/debug-raw-request
+    /// </summary>
+    [HttpPost("debug-raw-request")]
+    [Consumes("multipart/form-data", "application/x-www-form-urlencoded")]
+    public IActionResult DebugRawRequest()
+    {
+        Console.WriteLine("========================================");
+        Console.WriteLine("=== DEBUG: rawRequest Endpoint ===");
+        Console.WriteLine("========================================");
+        Console.WriteLine($"Content-Type: {Request.ContentType}");
+        Console.WriteLine($"HasFormContentType: {Request.HasFormContentType}");
+        Console.WriteLine($"Form Count: {Request.Form?.Count ?? 0}");
+        Console.WriteLine("");
+
+        _logger.LogInformation("========================================");
+        _logger.LogInformation("=== DEBUG: rawRequest Endpoint ===");
+        _logger.LogInformation("========================================");
+        _logger.LogInformation("Content-Type: {ContentType}", Request.ContentType);
+        _logger.LogInformation("HasFormContentType: {HasForm}", Request.HasFormContentType);
+        _logger.LogInformation("Form Count: {Count}", Request.Form?.Count ?? 0);
+        _logger.LogInformation("");
+
+        var result = new Dictionary<string, object?>
+        {
+            ["endpoint"] = "debug-raw-request",
+            ["contentType"] = Request.ContentType,
+            ["hasFormContentType"] = Request.HasFormContentType,
+            ["formFieldCount"] = Request.Form?.Count ?? 0,
+            ["allFormFields"] = new Dictionary<string, string>(),
+            ["rawRequest"] = new Dictionary<string, object?>()
+        };
+
+        // List all form fields
+        if (Request.HasFormContentType && Request.Form != null)
+        {
+            Console.WriteLine("--- All Form Fields ---");
+            _logger.LogInformation("--- All Form Fields ---");
+            foreach (var field in Request.Form)
+            {
+                var value = field.Value.ToString();
+                var displayValue = value?.Length > 100 ? value.Substring(0, 100) + "..." : value;
+                Console.WriteLine($"  [{field.Key}] = {displayValue}");
+                _logger.LogInformation("  [{Key}] = {Value}", field.Key, displayValue);
+                ((Dictionary<string, string>)result["allFormFields"]!)[field.Key] = value ?? string.Empty;
+            }
+            Console.WriteLine("");
+            _logger.LogInformation("");
+        }
+
+        // Extract and analyze rawRequest
+        if (Request.HasFormContentType && Request.Form != null && Request.Form.TryGetValue("rawRequest", out var rawRequestValues))
+        {
+            var rawRequest = rawRequestValues.ToString();
+            
+            Console.WriteLine("========================================");
+            Console.WriteLine("=== rawRequest Found ===");
+            Console.WriteLine("========================================");
+            Console.WriteLine($"Length: {rawRequest?.Length ?? 0} characters");
+            Console.WriteLine("");
+
+            _logger.LogInformation("========================================");
+            _logger.LogInformation("=== rawRequest Found ===");
+            _logger.LogInformation("========================================");
+            _logger.LogInformation("Length: {Length} characters", rawRequest?.Length ?? 0);
+            _logger.LogInformation("");
+
+            if (!string.IsNullOrWhiteSpace(rawRequest))
+            {
+                // Print full content
+                Console.WriteLine("--- Full rawRequest Content ---");
+                Console.WriteLine(rawRequest);
+                Console.WriteLine("--- End of rawRequest Content ---");
+                Console.WriteLine("");
+
+                _logger.LogInformation("--- Full rawRequest Content ---");
+                _logger.LogInformation("{Content}", rawRequest);
+                _logger.LogInformation("--- End of rawRequest Content ---");
+                _logger.LogInformation("");
+
+                // Try to parse as JSON
+                try
+                {
+                    var jsonDoc = JsonDocument.Parse(rawRequest);
+                    Console.WriteLine("--- JSON Analysis ---");
+                    Console.WriteLine("Valid JSON: Yes");
+                    Console.WriteLine($"Root Element Type: {jsonDoc.RootElement.ValueKind}");
+                    Console.WriteLine("");
+
+                    _logger.LogInformation("--- JSON Analysis ---");
+                    _logger.LogInformation("Valid JSON: Yes");
+                    _logger.LogInformation("Root Element Type: {Type}", jsonDoc.RootElement.ValueKind);
+                    _logger.LogInformation("");
+
+                    if (jsonDoc.RootElement.ValueKind == JsonValueKind.Object)
+                    {
+                        Console.WriteLine("--- Top-Level Properties ---");
+                        _logger.LogInformation("--- Top-Level Properties ---");
+                        foreach (var prop in jsonDoc.RootElement.EnumerateObject())
+                        {
+                            var propValue = prop.Value.ValueKind == JsonValueKind.String 
+                                ? prop.Value.GetString() 
+                                : prop.Value.ToString();
+                            
+                            var displayValue = propValue?.Length > 200 ? propValue.Substring(0, 200) + "..." : propValue;
+                            
+                            Console.WriteLine($"  [{prop.Name}]");
+                            Console.WriteLine($"    Type: {prop.Value.ValueKind}");
+                            Console.WriteLine($"    Value: {displayValue}");
+                            Console.WriteLine("");
+
+                            _logger.LogInformation("  [{Key}]", prop.Name);
+                            _logger.LogInformation("    Type: {Type}", prop.Value.ValueKind);
+                            _logger.LogInformation("    Value: {Value}", displayValue);
+                            _logger.LogInformation("");
+                        }
+                    }
+
+                    ((Dictionary<string, object?>)result["rawRequest"]!)["isValidJson"] = true;
+                    ((Dictionary<string, object?>)result["rawRequest"]!)["rootElementType"] = jsonDoc.RootElement.ValueKind.ToString();
+                    ((Dictionary<string, object?>)result["rawRequest"]!)["fullContent"] = rawRequest;
+                }
+                catch (JsonException ex)
+                {
+                    Console.WriteLine("--- JSON Analysis ---");
+                    Console.WriteLine("Valid JSON: No");
+                    Console.WriteLine($"Error: {ex.Message}");
+                    Console.WriteLine("");
+
+                    _logger.LogWarning("--- JSON Analysis ---");
+                    _logger.LogWarning("Valid JSON: No");
+                    _logger.LogWarning("Error: {Message}", ex.Message);
+                    _logger.LogWarning("");
+
+                    ((Dictionary<string, object?>)result["rawRequest"]!)["isValidJson"] = false;
+                    ((Dictionary<string, object?>)result["rawRequest"]!)["parseError"] = ex.Message;
+                    ((Dictionary<string, object?>)result["rawRequest"]!)["fullContent"] = rawRequest;
+                }
+            }
+            else
+            {
+                Console.WriteLine("rawRequest is null or empty!");
+                _logger.LogWarning("rawRequest is null or empty!");
+                ((Dictionary<string, object?>)result["rawRequest"]!)["error"] = "rawRequest is null or empty";
+            }
+        }
+        else
+        {
+            Console.WriteLine("========================================");
+            Console.WriteLine("=== rawRequest NOT FOUND ===");
+            Console.WriteLine("========================================");
+
+            _logger.LogWarning("========================================");
+            _logger.LogWarning("=== rawRequest NOT FOUND ===");
+            _logger.LogWarning("========================================");
+            ((Dictionary<string, object?>)result["rawRequest"]!)["error"] = "rawRequest field not found in form data";
+        }
+
+        Console.WriteLine("========================================");
+        Console.WriteLine("=== End of DEBUG ===");
+        Console.WriteLine("========================================");
+
+        _logger.LogInformation("========================================");
+        _logger.LogInformation("=== End of DEBUG ===");
+        _logger.LogInformation("========================================");
+
+        return Ok(ApiResponseHelper.Success(result, "Debug endpoint - rawRequest analysis complete"));
     }
 
     /// <summary>
