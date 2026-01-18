@@ -144,10 +144,6 @@ public class SightWebhookController : ControllerBase
     [Consumes("multipart/form-data", "application/x-www-form-urlencoded")]
     public IActionResult TestFormCollection([FromForm] IFormCollection form)
     {
-        Console.WriteLine("=== Test Endpoint 1: IFormCollection ===");
-        Console.WriteLine($"Content-Type: {Request.ContentType}");
-        Console.WriteLine($"Form Count: {form?.Count ?? 0}");
-
         _logger.LogInformation("=== Test Endpoint 1: IFormCollection ===");
         _logger.LogInformation("Content-Type: {ContentType}", Request.ContentType);
         _logger.LogInformation("Form Count: {Count}", form?.Count ?? 0);
@@ -164,7 +160,6 @@ public class SightWebhookController : ControllerBase
             foreach (var field in form)
             {
                 var value = field.Value.ToString();
-                Console.WriteLine($"Form Field: {field.Key} = {value}");
                 _logger.LogInformation("Form Field: {Key} = {Value}", field.Key, value);
                 ((Dictionary<string, string>)result["formFields"]!)[field.Key] = value ?? string.Empty;
             }
@@ -173,19 +168,12 @@ public class SightWebhookController : ControllerBase
             if (form.TryGetValue("rawRequest", out var rawRequestValues))
             {
                 var rawRequest = rawRequestValues.ToString();
-                Console.WriteLine("=== Found rawRequest ===");
-                Console.WriteLine($"rawRequest Length: {rawRequest?.Length ?? 0} characters");
-                
                 _logger.LogInformation("=== Found rawRequest ===");
                 _logger.LogInformation("rawRequest Length: {Length} characters", rawRequest?.Length ?? 0);
                 
                 if (!string.IsNullOrWhiteSpace(rawRequest))
                 {
                     // Print full rawRequest content
-                    Console.WriteLine("=== rawRequest Full Content ===");
-                    Console.WriteLine(rawRequest);
-                    Console.WriteLine("=== End of rawRequest ===");
-
                     _logger.LogInformation("=== rawRequest Full Content ===");
                     _logger.LogInformation("{Content}", rawRequest);
                     _logger.LogInformation("=== End of rawRequest ===");
@@ -194,16 +182,12 @@ public class SightWebhookController : ControllerBase
                     try
                     {
                         var jsonDoc = JsonDocument.Parse(rawRequest);
-                        Console.WriteLine("=== rawRequest is valid JSON ===");
-                        Console.WriteLine($"JSON Root Element Type: {jsonDoc.RootElement.ValueKind}");
-                        
                         _logger.LogInformation("=== rawRequest is valid JSON ===");
                         _logger.LogInformation("JSON Root Element Type: {Type}", jsonDoc.RootElement.ValueKind);
                         
                         // Log all top-level keys
                         if (jsonDoc.RootElement.ValueKind == JsonValueKind.Object)
                         {
-                            Console.WriteLine("=== JSON Top-Level Keys ===");
                             _logger.LogInformation("=== JSON Top-Level Keys ===");
                             foreach (var prop in jsonDoc.RootElement.EnumerateObject())
                             {
@@ -211,7 +195,6 @@ public class SightWebhookController : ControllerBase
                                     ? prop.Value.GetString() 
                                     : prop.Value.ToString();
                                 
-                                Console.WriteLine($"Key: {prop.Name}, Value Type: {prop.Value.ValueKind}, Value: {propValue}");
                                 _logger.LogInformation("Key: {Key}, Value Type: {Type}, Value: {Value}", 
                                     prop.Name, 
                                     prop.Value.ValueKind,
@@ -221,7 +204,6 @@ public class SightWebhookController : ControllerBase
                     }
                     catch (JsonException ex)
                     {
-                        Console.WriteLine($"rawRequest is not valid JSON: {ex.Message}");
                         _logger.LogWarning(ex, "rawRequest is not valid JSON: {Message}", ex.Message);
                     }
                 }
@@ -231,7 +213,6 @@ public class SightWebhookController : ControllerBase
             }
             else
             {
-                Console.WriteLine("rawRequest field NOT FOUND in form data!");
                 _logger.LogWarning("rawRequest field NOT FOUND in form data!");
             }
         }
@@ -512,14 +493,6 @@ public class SightWebhookController : ControllerBase
     [Consumes("multipart/form-data", "application/x-www-form-urlencoded")]
     public IActionResult DebugRawRequest()
     {
-        Console.WriteLine("========================================");
-        Console.WriteLine("=== DEBUG: rawRequest Endpoint ===");
-        Console.WriteLine("========================================");
-        Console.WriteLine($"Content-Type: {Request.ContentType}");
-        Console.WriteLine($"HasFormContentType: {Request.HasFormContentType}");
-        Console.WriteLine($"Form Count: {Request.Form?.Count ?? 0}");
-        Console.WriteLine("");
-
         _logger.LogInformation("========================================");
         _logger.LogInformation("=== DEBUG: rawRequest Endpoint ===");
         _logger.LogInformation("========================================");
@@ -541,17 +514,14 @@ public class SightWebhookController : ControllerBase
         // List all form fields
         if (Request.HasFormContentType && Request.Form != null)
         {
-            Console.WriteLine("--- All Form Fields ---");
             _logger.LogInformation("--- All Form Fields ---");
             foreach (var field in Request.Form)
             {
                 var value = field.Value.ToString();
                 var displayValue = value?.Length > 100 ? value.Substring(0, 100) + "..." : value;
-                Console.WriteLine($"  [{field.Key}] = {displayValue}");
                 _logger.LogInformation("  [{Key}] = {Value}", field.Key, displayValue);
                 ((Dictionary<string, string>)result["allFormFields"]!)[field.Key] = value ?? string.Empty;
             }
-            Console.WriteLine("");
             _logger.LogInformation("");
         }
 
@@ -560,12 +530,6 @@ public class SightWebhookController : ControllerBase
         {
             var rawRequest = rawRequestValues.ToString();
             
-            Console.WriteLine("========================================");
-            Console.WriteLine("=== rawRequest Found ===");
-            Console.WriteLine("========================================");
-            Console.WriteLine($"Length: {rawRequest?.Length ?? 0} characters");
-            Console.WriteLine("");
-
             _logger.LogInformation("========================================");
             _logger.LogInformation("=== rawRequest Found ===");
             _logger.LogInformation("========================================");
@@ -575,11 +539,6 @@ public class SightWebhookController : ControllerBase
             if (!string.IsNullOrWhiteSpace(rawRequest))
             {
                 // Print full content
-                Console.WriteLine("--- Full rawRequest Content ---");
-                Console.WriteLine(rawRequest);
-                Console.WriteLine("--- End of rawRequest Content ---");
-                Console.WriteLine("");
-
                 _logger.LogInformation("--- Full rawRequest Content ---");
                 _logger.LogInformation("{Content}", rawRequest);
                 _logger.LogInformation("--- End of rawRequest Content ---");
@@ -589,11 +548,6 @@ public class SightWebhookController : ControllerBase
                 try
                 {
                     var jsonDoc = JsonDocument.Parse(rawRequest);
-                    Console.WriteLine("--- JSON Analysis ---");
-                    Console.WriteLine("Valid JSON: Yes");
-                    Console.WriteLine($"Root Element Type: {jsonDoc.RootElement.ValueKind}");
-                    Console.WriteLine("");
-
                     _logger.LogInformation("--- JSON Analysis ---");
                     _logger.LogInformation("Valid JSON: Yes");
                     _logger.LogInformation("Root Element Type: {Type}", jsonDoc.RootElement.ValueKind);
@@ -601,7 +555,6 @@ public class SightWebhookController : ControllerBase
 
                     if (jsonDoc.RootElement.ValueKind == JsonValueKind.Object)
                     {
-                        Console.WriteLine("--- Top-Level Properties ---");
                         _logger.LogInformation("--- Top-Level Properties ---");
                         foreach (var prop in jsonDoc.RootElement.EnumerateObject())
                         {
@@ -611,11 +564,6 @@ public class SightWebhookController : ControllerBase
                             
                             var displayValue = propValue?.Length > 200 ? propValue.Substring(0, 200) + "..." : propValue;
                             
-                            Console.WriteLine($"  [{prop.Name}]");
-                            Console.WriteLine($"    Type: {prop.Value.ValueKind}");
-                            Console.WriteLine($"    Value: {displayValue}");
-                            Console.WriteLine("");
-
                             _logger.LogInformation("  [{Key}]", prop.Name);
                             _logger.LogInformation("    Type: {Type}", prop.Value.ValueKind);
                             _logger.LogInformation("    Value: {Value}", displayValue);
@@ -629,11 +577,6 @@ public class SightWebhookController : ControllerBase
                 }
                 catch (JsonException ex)
                 {
-                    Console.WriteLine("--- JSON Analysis ---");
-                    Console.WriteLine("Valid JSON: No");
-                    Console.WriteLine($"Error: {ex.Message}");
-                    Console.WriteLine("");
-
                     _logger.LogWarning("--- JSON Analysis ---");
                     _logger.LogWarning("Valid JSON: No");
                     _logger.LogWarning("Error: {Message}", ex.Message);
@@ -646,26 +589,17 @@ public class SightWebhookController : ControllerBase
             }
             else
             {
-                Console.WriteLine("rawRequest is null or empty!");
                 _logger.LogWarning("rawRequest is null or empty!");
                 ((Dictionary<string, object?>)result["rawRequest"]!)["error"] = "rawRequest is null or empty";
             }
         }
         else
         {
-            Console.WriteLine("========================================");
-            Console.WriteLine("=== rawRequest NOT FOUND ===");
-            Console.WriteLine("========================================");
-
             _logger.LogWarning("========================================");
             _logger.LogWarning("=== rawRequest NOT FOUND ===");
             _logger.LogWarning("========================================");
             ((Dictionary<string, object?>)result["rawRequest"]!)["error"] = "rawRequest field not found in form data";
         }
-
-        Console.WriteLine("========================================");
-        Console.WriteLine("=== End of DEBUG ===");
-        Console.WriteLine("========================================");
 
         _logger.LogInformation("========================================");
         _logger.LogInformation("=== End of DEBUG ===");
