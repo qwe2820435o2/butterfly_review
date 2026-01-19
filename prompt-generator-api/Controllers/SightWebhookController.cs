@@ -103,9 +103,10 @@ public class SightWebhookController : ControllerBase
         
         try
         {
-            _logger.LogInformation("开始处理 webhook 数据，rawRequest 长度: {Length}, Timestamp: {Timestamp} , RawRequestJson: {rawRequestJson}", 
+            _logger.LogInformation("开始处理 webhook 数据，rawRequest 长度: {Length}, Timestamp: {Timestamp} , RawRequestJson: {RawRequestJson}", 
                 rawRequestJson.Length, 
-                timestamp);
+                timestamp,
+                rawRequestJson);
 
             // Parse JSON
             var options = new JsonSerializerOptions
