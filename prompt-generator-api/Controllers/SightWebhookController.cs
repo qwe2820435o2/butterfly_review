@@ -103,7 +103,7 @@ public class SightWebhookController : ControllerBase
         
         try
         {
-            _logger.LogInformation("开始处理 webhook 数据，rawRequest 长度: {Length}, Timestamp: {Timestamp}", 
+            _logger.LogInformation("开始处理 webhook 数据，rawRequest 长度: {Length}, Timestamp: {Timestamp} , RawRequestJson: {rawRequestJson}", 
                 rawRequestJson.Length, 
                 timestamp);
 
@@ -117,7 +117,7 @@ public class SightWebhookController : ControllerBase
             
             if (parsedRequest == null)
             {
-                _logger.LogError("解析 rawRequest JSON 失败，返回 null. Timestamp: {Timestamp} , rawRequestJson: {RawRequestJson}", timestamp, rawRequestJson);
+                _logger.LogError("解析 rawRequest JSON 失败，返回 null. Timestamp: {Timestamp}", timestamp);
                 return;
             }
 
