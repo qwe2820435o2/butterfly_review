@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -9,6 +10,9 @@ using tennis_wave_api.Extensions;
 using tennis_wave_api.Models;
 using tennis_wave_api.Models.Entities;
 
+// Set console output encoding to UTF-8 to support Chinese characters
+Console.OutputEncoding = Encoding.UTF8;
+
 var myAllowSpecificOrigins = "_myAllowSpecificOrigins";
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,7 +21,7 @@ Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
     .WriteTo.Console()
-    .WriteTo.File("Logs/log-.txt", rollingInterval: RollingInterval.Day)
+    .WriteTo.File("Logs/log-.txt", rollingInterval: RollingInterval.Day, encoding: Encoding.UTF8)
     .CreateLogger();
 
 builder.Host.UseSerilog();
@@ -192,6 +196,9 @@ builder.Services.Configure<JotformSettings>(
     builder.Configuration.GetSection(JotformSettings.SectionName));
 
 builder.Services.AddHttpClient();
+
+// Register background tasks
+builder.Services.AddHostedService<tennis_wave_api.Tasks.TagNumberNormalizationTask>();
 
 
 var app = builder.Build();
