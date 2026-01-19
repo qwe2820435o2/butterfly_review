@@ -38,21 +38,22 @@ public class GmailService : IGmailService
             // Get access token using refresh token
             var accessToken = await GetAccessTokenAsync(cancellationToken);
 
-            // Build email message
+            // Build email message (matching original TS format with \r\n)
             var email = new StringBuilder();
-            email.AppendLine($"To: {recipients}");
-            email.AppendLine($"Subject: {subject}");
-            email.AppendLine("MIME-Version: 1.0");
-            email.AppendLine("Content-Type: text/html; charset=utf-8");
-            email.AppendLine();
+            email.Append($"To: {recipients}\r\n");
+            email.Append($"Subject: {subject}\r\n");
+            email.Append("MIME-Version: 1.0\r\n");
+            email.Append("Content-Type: text/html; charset=utf-8\r\n");
+            email.Append("\r\n");
             email.Append(bodyHtml);
 
             // Encode message (RFC 4648 URL-safe base64)
+            // Match original TS logic: replace + with -, / with _, and remove trailing = signs
             var emailBytes = Encoding.UTF8.GetBytes(email.ToString());
             var encodedMessage = Convert.ToBase64String(emailBytes)
                 .Replace('+', '-')
                 .Replace('/', '_')
-                .Replace("=", "");
+                .TrimEnd('=');
 
             // Send email via Gmail API
             var client = _httpClientFactory.CreateClient();

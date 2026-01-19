@@ -55,6 +55,20 @@ public class WebhookProcessingService : IWebhookProcessingService
 
             _logger.LogInformation("收到的标签号: {TagNumber}", tagNumber);
 
+            // Handle lowercase tag numbers (update JotForm if found in sighting form)
+            if (tagNumber.Any(char.IsLower))
+            {
+                _logger.LogInformation("处理小写标签号: {TagNumber}", tagNumber);
+                var sightingSubmission = await _jotformApiService.FindSightingSubmissionByTagNumberAsync(tagNumber, cancellationToken);
+                if (sightingSubmission != null)
+                {
+                    _logger.LogInformation("找到 sighting submission: {SubmissionId}，更新标签号为大写", sightingSubmission.Id);
+                    // "25" is the field ID for tagNumber in the Sighting Form
+                    await _jotformApiService.UpdateSubmissionFieldAsync(sightingSubmission.Id, "25", tagNumber.ToUpperInvariant(), cancellationToken);
+                    _logger.LogInformation("已更新 sighting submission {SubmissionId} 的标签号为大写", sightingSubmission.Id);
+                }
+            }
+
             // Normalize tag number to uppercase
             tagNumber = tagNumber.ToUpperInvariant();
             _logger.LogInformation("标准化后的标签号: {TagNumber}", tagNumber);
@@ -101,13 +115,20 @@ public class WebhookProcessingService : IWebhookProcessingService
             _logger.LogInformation("准备发送邮件");
             var emailContent = BuildEmailContent(tagNumber, dateOfRelease, addressOfRelease, seenOfTime, seenOfTimeAddress, timestamp);
 
-            // Prepare recipient list
+            // Prepare recipient list (matching original TS logic)
             var recipientEmails = new List<string>();
+            
+            // Add email from webhook request (q17_email)
             if (!string.IsNullOrWhiteSpace(rawRequest.Email))
             {
                 recipientEmails.Add(rawRequest.Email);
             }
-            recipientEmails.AddRange(NotificationEmails);
+            
+            // Add fixed notification emails (jacqui and devangi, but NOT hi.travis.nong)
+            recipientEmails.Add("jacqui@nzbutterflies.org.nz");
+            recipientEmails.Add("devangi1008@gmail.com");
+            
+            // Add email from release submission (if valid and not already in list)
             if (!string.IsNullOrWhiteSpace(email) && email != "Unknown" && !recipientEmails.Contains(email))
             {
                 recipientEmails.Add(email);
