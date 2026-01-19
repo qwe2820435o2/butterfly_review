@@ -129,8 +129,8 @@ public class WebhookProcessingService : IWebhookProcessingService
             }
             
             // Add fixed notification emails (jacqui and devangi, but NOT hi.travis.nong)
-            recipientEmails.Add("jacqui@nzbutterflies.org.nz");
-            recipientEmails.Add("devangi1008@gmail.com");
+            /*recipientEmails.Add("jacqui@nzbutterflies.org.nz");
+            recipientEmails.Add("devangi1008@gmail.com");*/
             
             // Add email from release submission (if valid and not already in list)
             if (!string.IsNullOrWhiteSpace(email) && email != "Unknown" && !recipientEmails.Contains(email))
