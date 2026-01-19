@@ -117,7 +117,7 @@ public class SightWebhookController : ControllerBase
             
             if (parsedRequest == null)
             {
-                _logger.LogError("解析 rawRequest JSON 失败，返回 null. Timestamp: {Timestamp}", timestamp);
+                _logger.LogError("解析 rawRequest JSON 失败，返回 null. Timestamp: {Timestamp} , rawRequestJson: {RawRequestJson}", timestamp, rawRequestJson);
                 return;
             }
 
