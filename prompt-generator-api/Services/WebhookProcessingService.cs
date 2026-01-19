@@ -25,9 +25,9 @@ public class WebhookProcessingService : IWebhookProcessingService
     // Notification email addresses
     private static readonly string[] NotificationEmails = 
     {
-        "hi.travis.nong@gmail.com",
+        /*"hi.travis.nong@gmail.com",
         "jacqui@nzbutterflies.org.nz",
-        "devangi1008@gmail.com"
+        "devangi1008@gmail.com"*/
     };
 
     public WebhookProcessingService(
