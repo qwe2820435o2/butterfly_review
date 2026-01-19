@@ -24,4 +24,6 @@ public interface IReleaseSubmissionRepository
     Task<IReadOnlyList<ReleaseSubmission>> GetAllWithCoordinatesAsync();
 
     Task DeleteByIdAsync(string id);
+
+    Task InsertAsync(ReleaseSubmission entity);
 }

@@ -219,4 +219,13 @@ public class ReleaseSubmissionRepository : IReleaseSubmissionRepository
     {
         await _collection.DeleteOneAsync(x => x.Id == id);
     }
+
+    public async Task InsertAsync(ReleaseSubmission entity)
+    {
+        if (string.IsNullOrEmpty(entity.Id))
+        {
+            entity.Id = ObjectId.GenerateNewId().ToString();
+        }
+        await _collection.InsertOneAsync(entity);
+    }
 }
