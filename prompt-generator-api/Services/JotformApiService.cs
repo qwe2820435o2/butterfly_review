@@ -77,11 +77,6 @@ public class JotformApiService : IJotformApiService
         return await FindSubmissionByTagNumberAsync(_settings.ReleaseFormId, tagNumber, "27", cancellationToken);
     }
 
-    public async Task<JotformSubmissionRawDto?> FindSightingSubmissionByTagNumberAsync(string tagNumber, CancellationToken cancellationToken = default)
-    {
-        return await FindSubmissionByTagNumberAsync(_settings.SightingFormId, tagNumber, "25", cancellationToken);
-    }
-
     private async Task<JotformSubmissionRawDto?> FindSubmissionByTagNumberAsync(string formId, string tagNumber, string tagFieldId, CancellationToken cancellationToken)
     {
         var offset = 0;
@@ -124,29 +119,6 @@ public class JotformApiService : IJotformApiService
         }
 
         return null;
-    }
-
-    public async Task UpdateSubmissionFieldAsync(string submissionId, string fieldId, string value, CancellationToken cancellationToken = default)
-    {
-        var client = _httpClientFactory.CreateClient();
-        var url = $"https://api.jotform.com/submission/{submissionId}";
-
-        var formData = new Dictionary<string, string>
-        {
-            ["apiKey"] = _settings.ApiKey,
-            [$"submission[{fieldId}]"] = value
-        };
-
-        var content = new FormUrlEncodedContent(formData);
-        var request = new HttpRequestMessage(HttpMethod.Post, url)
-        {
-            Content = content
-        };
-
-        var response = await client.SendAsync(request, cancellationToken);
-        response.EnsureSuccessStatusCode();
-
-        _logger?.LogInformation("成功更新提交记录 {SubmissionId} 的字段 {FieldId} 为 {Value}", submissionId, fieldId, value);
     }
 
     /// <summary>
