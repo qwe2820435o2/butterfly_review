@@ -1,7 +1,10 @@
-using System.Text.Json;
-using System.Text.RegularExpressions;
+using System.Linq;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using tennis_wave_api.Data.Interfaces;
+using tennis_wave_api.Models;
 using tennis_wave_api.Models.DTOs;
+using tennis_wave_api.Models.Entities;
 using tennis_wave_api.Services.Interfaces;
 
 namespace tennis_wave_api.Services;
@@ -13,7 +16,10 @@ namespace tennis_wave_api.Services;
 public class WebhookProcessingService : IWebhookProcessingService
 {
     private readonly IJotformApiService _jotformApiService;
+    private readonly IReleaseSubmissionRepository _releaseSubmissionRepository;
+    private readonly ISightingSubmissionRepository _sightingSubmissionRepository;
     private readonly IGmailService _gmailService;
+    private readonly JotformSettings _jotformSettings;
     private readonly ILogger<WebhookProcessingService> _logger;
 
     // Notification email addresses
@@ -26,11 +32,17 @@ public class WebhookProcessingService : IWebhookProcessingService
 
     public WebhookProcessingService(
         IJotformApiService jotformApiService,
+        IReleaseSubmissionRepository releaseSubmissionRepository,
+        ISightingSubmissionRepository sightingSubmissionRepository,
         IGmailService gmailService,
+        IOptions<JotformSettings> jotformOptions,
         ILogger<WebhookProcessingService> logger)
     {
         _jotformApiService = jotformApiService;
+        _releaseSubmissionRepository = releaseSubmissionRepository;
+        _sightingSubmissionRepository = sightingSubmissionRepository;
         _gmailService = gmailService;
+        _jotformSettings = jotformOptions.Value;
         _logger = logger;
     }
 
@@ -59,9 +71,13 @@ public class WebhookProcessingService : IWebhookProcessingService
             tagNumber = tagNumber.ToUpperInvariant();
             _logger.LogInformation("标准化后的标签号: {TagNumber}", tagNumber);
 
-            // Find release submission
-            _logger.LogInformation("开始查找 Release submission");
-            var releaseSubmission = await _jotformApiService.FindReleaseSubmissionByTagNumberAsync(tagNumber, cancellationToken);
+            // Find release submission from MongoDB
+            _logger.LogInformation("开始从 MongoDB 查找 Release submission, TagNumber: {TagNumber}", tagNumber);
+            var releaseSubmissions = await _releaseSubmissionRepository.GetByTagNumberAsync(tagNumber);
+            
+            // Filter by case-insensitive match (MongoDB query is case-sensitive)
+            var releaseSubmission = releaseSubmissions
+                .FirstOrDefault(s => string.Equals(s.TagNumber, tagNumber, StringComparison.OrdinalIgnoreCase));
 
             if (releaseSubmission == null)
             {
@@ -75,7 +91,8 @@ public class WebhookProcessingService : IWebhookProcessingService
                 return;
             }
 
-            _logger.LogInformation("找到匹配的 Release submission: {SubmissionId}", releaseSubmission.Id);
+            _logger.LogInformation("找到匹配的 Release submission: SubmissionId={SubmissionId}, MongoDB Id={Id}", 
+                releaseSubmission.SubmissionId, releaseSubmission.Id);
 
             // Validate date data
             if (rawRequest.Date == null)
@@ -89,10 +106,11 @@ public class WebhookProcessingService : IWebhookProcessingService
             var seenOfTimeAddress = rawRequest.Address ?? "Unknown location";
             _logger.LogInformation("观察时间和地点: Time={Time}, Address={Address}", seenOfTime, seenOfTimeAddress);
 
-            // Extract release submission data
-            var dateOfRelease = GetAnswerPrettyFormat(releaseSubmission, "20") ?? "Unknown";
-            var addressOfRelease = GetStringAnswer(releaseSubmission, "36") ?? "Unknown";
-            var email = GetStringAnswer(releaseSubmission, "17") ?? "Unknown";
+            // Extract release submission data from MongoDB entity
+            // ReleaseSubmission entity already has these fields mapped from JotForm
+            var dateOfRelease = releaseSubmission.ReleaseDatePretty ?? "Unknown";
+            var addressOfRelease = releaseSubmission.Address ?? "Unknown";
+            var email = releaseSubmission.Email ?? "Unknown";
 
             _logger.LogInformation("提交信息: DateOfRelease={Date}, AddressOfRelease={Address}, Email={Email}", 
                 dateOfRelease, addressOfRelease, email);
@@ -128,6 +146,21 @@ public class WebhookProcessingService : IWebhookProcessingService
                 "Re: Tagged Butterfly Sighting",
                 emailContent,
                 cancellationToken);
+
+            // Save sighting submission to MongoDB
+            try
+            {
+                _logger.LogInformation("开始保存 Sighting submission 到 MongoDB, TagNumber: {TagNumber}", tagNumber);
+                var sightingSubmission = CreateSightingSubmissionFromWebhook(rawRequest, tagNumber, timestamp);
+                await _sightingSubmissionRepository.InsertAsync(sightingSubmission);
+                _logger.LogInformation("成功保存 Sighting submission 到 MongoDB, SubmissionId: {SubmissionId}", sightingSubmission.SubmissionId);
+            }
+            catch (Exception saveEx)
+            {
+                // Log error but don't fail the entire process
+                _logger.LogError(saveEx, "保存 Sighting submission 到 MongoDB 失败, TagNumber: {TagNumber}, Timestamp: {Timestamp}", 
+                    tagNumber, timestamp);
+            }
 
             _logger.LogInformation("成功处理 webhook 数据，标签号: {TagNumber}", tagNumber);
         }
@@ -219,29 +252,104 @@ public class WebhookProcessingService : IWebhookProcessingService
     }
 
     /// <summary>
-    /// Get string answer from submission by field ID.
+    /// Create SightingSubmission entity from webhook data.
     /// </summary>
-    private static string? GetStringAnswer(JotformSubmissionRawDto submission, string fieldId)
+    private SightingSubmission CreateSightingSubmissionFromWebhook(
+        WebhookRawRequestDto rawRequest, 
+        string tagNumber, 
+        long timestamp)
     {
-        if (!submission.Answers.TryGetValue(fieldId, out var answer) || answer.AnswerJson is null)
+        var now = DateTime.UtcNow;
+        
+        // Generate a unique submission ID based on timestamp
+        // Format: "webhook_{timestamp}"
+        var submissionId = $"webhook_{timestamp}";
+
+        // Format sighting date/time from webhook data
+        string? sightingDatePretty = null;
+        DateTime? sightingDateTimeUtc = null;
+        
+        if (rawRequest.Date != null)
         {
-            return null;
+            sightingDatePretty = $"{rawRequest.Date.Day}-{rawRequest.Date.Month}-{rawRequest.Date.Year} {rawRequest.Date.TimeInput} {rawRequest.Date.AmPm}";
+            
+            // Try to parse datetime
+            if (!string.IsNullOrWhiteSpace(rawRequest.Date.Day) &&
+                !string.IsNullOrWhiteSpace(rawRequest.Date.Month) &&
+                !string.IsNullOrWhiteSpace(rawRequest.Date.Year) &&
+                !string.IsNullOrWhiteSpace(rawRequest.Date.TimeInput))
+            {
+                var dateStr = $"{rawRequest.Date.Year}-{rawRequest.Date.Month.PadLeft(2, '0')}-{rawRequest.Date.Day.PadLeft(2, '0')} {rawRequest.Date.TimeInput} {rawRequest.Date.AmPm}";
+                if (DateTime.TryParse(dateStr, out var parsedDate))
+                {
+                    sightingDateTimeUtc = parsedDate.ToUniversalTime();
+                }
+            }
         }
 
-        var value = answer.AnswerJson.Value;
-        return value.ValueKind == JsonValueKind.String ? value.GetString() : null;
-    }
-
-    /// <summary>
-    /// Get pretty format from submission by field ID.
-    /// </summary>
-    private static string? GetAnswerPrettyFormat(JotformSubmissionRawDto submission, string fieldId)
-    {
-        if (!submission.Answers.TryGetValue(fieldId, out var answer))
+        var entity = new SightingSubmission
         {
-            return null;
+            SubmissionId = submissionId,
+            FormId = _jotformSettings.SightingFormId,
+            Status = "ACTIVE",
+            CreatedAtRaw = now.ToString("yyyy-MM-dd HH:mm:ss"),
+            CreatedAtUtc = now,
+            InsertedAtUtc = now,
+            UpdatedAtUtc = now,
+            
+            // Map webhook fields
+            Email = rawRequest.Email,
+            TagNumber = tagNumber,
+            Address = rawRequest.Address,
+            SightingDatePretty = sightingDatePretty,
+            SightingDateTimeUtc = sightingDateTimeUtc,
+            
+            // Initialize empty Answers dictionary (webhook doesn't provide full answer structure)
+            Answers = new Dictionary<string, JotformAnswerRawDto>()
+        };
+
+        // Add basic answers if available (for consistency with JotForm structure)
+        if (!string.IsNullOrWhiteSpace(rawRequest.TagNumber))
+        {
+            entity.Answers["25"] = new JotformAnswerRawDto
+            {
+                Name = "tagNumber",
+                AnswerJson = System.Text.Json.JsonSerializer.SerializeToElement(rawRequest.TagNumber),
+                PrettyFormat = tagNumber
+            };
         }
 
-        return answer.PrettyFormat;
+        if (rawRequest.Date != null)
+        {
+            var dateJson = System.Text.Json.JsonSerializer.SerializeToElement(rawRequest.Date);
+            entity.Answers["30"] = new JotformAnswerRawDto
+            {
+                Name = "date",
+                AnswerJson = dateJson,
+                PrettyFormat = sightingDatePretty
+            };
+        }
+
+        if (!string.IsNullOrWhiteSpace(rawRequest.Address))
+        {
+            entity.Answers["43"] = new JotformAnswerRawDto
+            {
+                Name = "typeA43",
+                AnswerJson = System.Text.Json.JsonSerializer.SerializeToElement(rawRequest.Address),
+                PrettyFormat = rawRequest.Address
+            };
+        }
+
+        if (!string.IsNullOrWhiteSpace(rawRequest.Email))
+        {
+            entity.Answers["17"] = new JotformAnswerRawDto
+            {
+                Name = "email",
+                AnswerJson = System.Text.Json.JsonSerializer.SerializeToElement(rawRequest.Email),
+                PrettyFormat = rawRequest.Email
+            };
+        }
+
+        return entity;
     }
 }

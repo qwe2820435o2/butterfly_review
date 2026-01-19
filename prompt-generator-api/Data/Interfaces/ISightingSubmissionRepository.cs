@@ -13,6 +13,8 @@ public interface ISightingSubmissionRepository
 
     Task UpsertBySubmissionIdAsync(SightingSubmission entity);
 
+    Task InsertAsync(SightingSubmission entity);
+
     Task<IReadOnlyList<SightingSubmission>> GetByCreatedRangeAsync(
         DateTime? startUtc,
         DateTime? endUtc);

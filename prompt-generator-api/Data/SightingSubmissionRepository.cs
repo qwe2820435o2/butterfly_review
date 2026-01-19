@@ -125,6 +125,17 @@ public class SightingSubmissionRepository : ISightingSubmissionRepository
             new ReplaceOptions { IsUpsert = true });
     }
 
+    public async Task InsertAsync(SightingSubmission entity)
+    {
+        // Generate new ObjectId if Id is null
+        if (string.IsNullOrEmpty(entity.Id))
+        {
+            entity.Id = ObjectId.GenerateNewId().ToString();
+        }
+        
+        await _collection.InsertOneAsync(entity);
+    }
+
     public async Task<IReadOnlyList<SightingSubmission>> GetByCreatedRangeAsync(
         DateTime? startUtc,
         DateTime? endUtc)
