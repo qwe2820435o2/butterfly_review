@@ -217,7 +217,7 @@ public class WebhookProcessingService : IWebhookProcessingService
                 
                 <p>You can see a map of its journey here:</p>
                            
-                <a href=""https://butterfliestrace.ts.r.appspot.com/butterfly/{tagNumber}"" style=""color: blue;"">https://butterfliestrace.ts.r.appspot.com/butterfly/{tagNumber}</a>
+                <a href=""https://butterfly.up.railway.app/map/{tagNumber}"" style=""color: blue;"">https://butterfliestrace.ts.r.appspot.com/butterfly/{tagNumber}</a>
                 
                 <p>We are raising awareness about our monarch butterflies in NZ and conservation issues for both the monarch and other Lepidoptera species. What we learn will be shared with anyone, especially the scientific community, to help with conservation and addressing climate change.</p>
                 
