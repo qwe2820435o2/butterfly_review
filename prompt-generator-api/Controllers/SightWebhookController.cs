@@ -103,7 +103,7 @@ public class SightWebhookController : ControllerBase
         
         try
         {
-            _logger.LogInformation("开始处理 webhook 数据，rawRequest 长度: {Length}, Timestamp: {Timestamp} , RawRequestJson: {RawRequestJson}", 
+            _logger.LogInformation("开始处理 Sight Webhook 数据，rawRequest 长度: {Length}, Timestamp: {Timestamp} , RawRequestJson: {RawRequestJson}", 
                 rawRequestJson.Length, 
                 timestamp,
                 rawRequestJson);

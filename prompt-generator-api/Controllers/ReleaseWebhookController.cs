@@ -111,9 +111,10 @@ public class ReleaseWebhookController : ControllerBase
         
         try
         {
-            _logger.LogInformation("开始处理 Release webhook 数据，rawRequest 长度: {Length}, Timestamp: {Timestamp}", 
+            _logger.LogInformation("开始处理 Release webhook 数据，rawRequest 长度: {Length}, Timestamp: {Timestamp} , RawRequestJson: {RawRequestJson}", 
                 rawRequestJson.Length, 
-                timestamp);
+                timestamp,
+                rawRequestJson);
 
             // Fix unescaped newlines in JSON string values before parsing
             var fixedJson = FixUnescapedNewlinesInJson(rawRequestJson);
