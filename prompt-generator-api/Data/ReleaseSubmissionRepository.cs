@@ -125,6 +125,47 @@ public class ReleaseSubmissionRepository : IReleaseSubmissionRepository
             new ReplaceOptions { IsUpsert = true });
     }
 
+    public async Task UpsertByTagNumberAsync(ReleaseSubmission entity)
+    {
+        // TagNumber must not be empty for upsert
+        if (string.IsNullOrWhiteSpace(entity.TagNumber))
+        {
+            throw new ArgumentException("TagNumber cannot be null or empty for UpsertByTagNumberAsync", nameof(entity));
+        }
+
+        var filter = Builders<ReleaseSubmission>.Filter.Eq(x => x.TagNumber, entity.TagNumber);
+        
+        // Check if document exists
+        var existing = await _collection.Find(filter).FirstOrDefaultAsync();
+        if (existing != null)
+        {
+            // Document exists: MUST use existing Id (immutable field)
+            if (!string.IsNullOrEmpty(existing.Id))
+            {
+                entity.Id = existing.Id;
+            }
+            else
+            {
+                // Existing document has null Id (corrupted data): delete and re-insert
+                await _collection.DeleteOneAsync(filter);
+                entity.Id = ObjectId.GenerateNewId().ToString();
+            }
+        }
+        else
+        {
+            // New document: generate new ObjectId if Id is null
+            if (string.IsNullOrEmpty(entity.Id))
+            {
+                entity.Id = ObjectId.GenerateNewId().ToString();
+            }
+        }
+        
+        await _collection.ReplaceOneAsync(
+            filter,
+            entity,
+            new ReplaceOptions { IsUpsert = true });
+    }
+
     public async Task<IReadOnlyList<ReleaseSubmission>> GetByCreatedRangeAsync(
         DateTime? startUtc,
         DateTime? endUtc)

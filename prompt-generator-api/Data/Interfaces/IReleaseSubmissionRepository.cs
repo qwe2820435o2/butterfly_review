@@ -13,6 +13,8 @@ public interface IReleaseSubmissionRepository
 
     Task UpsertBySubmissionIdAsync(ReleaseSubmission entity);
 
+    Task UpsertByTagNumberAsync(ReleaseSubmission entity);
+
     Task<IReadOnlyList<ReleaseSubmission>> GetByCreatedRangeAsync(
         DateTime? startUtc,
         DateTime? endUtc);

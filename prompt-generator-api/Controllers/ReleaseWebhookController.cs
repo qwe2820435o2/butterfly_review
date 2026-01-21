@@ -141,10 +141,18 @@ public class ReleaseWebhookController : ControllerBase
             // Create ReleaseSubmission entity from webhook data
             var releaseSubmission = CreateReleaseSubmissionFromWebhook(parsedRequest, timestamp);
 
-            // Save to MongoDB
-            await _releaseSubmissionRepository.InsertAsync(releaseSubmission);
+            // Save to MongoDB (upsert by TagNumber to avoid duplicates)
+            if (string.IsNullOrWhiteSpace(releaseSubmission.TagNumber))
+            {
+                _logger.LogWarning("TagNumber 为空，无法执行 Upsert，跳过保存. SubmissionId: {SubmissionId}, Timestamp: {Timestamp}", 
+                    releaseSubmission.SubmissionId, 
+                    timestamp);
+                return;
+            }
 
-            _logger.LogInformation("成功保存 Release submission 到 MongoDB, SubmissionId: {SubmissionId}, TagNumber: {TagNumber}, Timestamp: {Timestamp}", 
+            await _releaseSubmissionRepository.UpsertByTagNumberAsync(releaseSubmission);
+
+            _logger.LogInformation("成功保存/更新 Release submission 到 MongoDB, SubmissionId: {SubmissionId}, TagNumber: {TagNumber}, Timestamp: {Timestamp}", 
                 releaseSubmission.SubmissionId, 
                 releaseSubmission.TagNumber,
                 timestamp);
