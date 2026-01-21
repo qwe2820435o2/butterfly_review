@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using tennis_wave_api.Helpers;
@@ -108,13 +109,16 @@ public class SightWebhookController : ControllerBase
                 timestamp,
                 rawRequestJson);
 
+            // Fix unescaped newlines in JSON string values before parsing
+            var fixedJson = FixUnescapedNewlinesInJson(rawRequestJson);
+
             // Parse JSON
             var options = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
             };
 
-            var parsedRequest = JsonSerializer.Deserialize<WebhookRawRequestDto>(rawRequestJson, options);
+            var parsedRequest = JsonSerializer.Deserialize<WebhookRawRequestDto>(fixedJson, options);
             
             if (parsedRequest == null)
             {
@@ -169,11 +173,11 @@ public class SightWebhookController : ControllerBase
     /// <returns>Validation result</returns>
     private (bool IsValid, string? ErrorMessage) ValidateWebhookData(WebhookRawRequestDto request, long timestamp)
     {
-        // Validate tagNumber (q25_tagNumber) - required
+        // Validate tagNumber (q47_tagNumber47) - required
         if (string.IsNullOrWhiteSpace(request.TagNumber))
         {
             _logger.LogWarning("标签号缺失. Timestamp: {Timestamp}", timestamp);
-            return (false, "Tag number (q25_tagNumber) is required but missing");
+            return (false, "Tag number (q47_tagNumber47) is required but missing");
         }
 
         // Validate date (q30_date) - required
@@ -197,5 +201,34 @@ public class SightWebhookController : ControllerBase
             timestamp);
 
         return (true, null);
+    }
+
+    /// <summary>
+    /// Fix unescaped newlines in JSON string values.
+    /// JotForm may send JSON with unescaped \r\n in string values, which causes JSON parsing errors.
+    /// </summary>
+    private static string FixUnescapedNewlinesInJson(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return json;
+        }
+
+        // Use regex to escape newlines within string values
+        var result = Regex.Replace(
+            json,
+            @"""([^""\\]*(\\.[^""\\]*)*)""",
+            match =>
+            {
+                var value = match.Groups[1].Value;
+                // Escape unescaped newlines and carriage returns
+                value = value.Replace("\r\n", "\\r\\n")
+                            .Replace("\r", "\\r")
+                            .Replace("\n", "\\n");
+                return $"\"{value}\"";
+            },
+            RegexOptions.None);
+
+        return result;
     }
 }
