@@ -1,0 +1,234 @@
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using tennis_wave_api.Helpers;
+using tennis_wave_api.Models.DTOs;
+using tennis_wave_api.Services.Interfaces;
+
+namespace tennis_wave_api.Controllers;
+
+/// <summary>
+/// Controller for handling JotForm webhook callbacks.
+/// Receives form submission notifications and processes them asynchronously.
+/// </summary>
+[ApiController]
+[Route("api/sight-webhook-02")]
+public class SightWebhookController02 : ControllerBase
+{
+    private readonly ILogger<SightWebhookController> _logger;
+    private readonly IWebhookProcessingService _webhookProcessingService;
+
+    public SightWebhookController02(
+        ILogger<SightWebhookController> logger,
+        IWebhookProcessingService webhookProcessingService)
+    {
+        _logger = logger;
+        _webhookProcessingService = webhookProcessingService;
+    }
+
+    /// <summary>
+    /// Handles Sight Form webhook POST requests.
+    /// Returns 200 immediately and processes the request asynchronously.
+    /// </summary>
+    /// <returns>Success response indicating the webhook was received</returns>
+    [HttpPost]
+    [Consumes("multipart/form-data")]
+    public IActionResult SightCallback()
+    {
+        _logger.LogInformation("收到 sight02 webhook 请求: Method={Method}, Path={Path}, QueryString={QueryString}",
+            Request.Method,
+            Request.Path,
+            Request.QueryString);
+
+        // Read form data before returning response (to avoid Request disposal)
+        string? rawRequestJson = null;
+        try
+        {
+            // Check if request has form content
+            if (Request.HasFormContentType)
+            {
+                // Extract rawRequest field from form
+                if (Request.Form.TryGetValue("rawRequest", out var rawRequestValues) && 
+                    rawRequestValues.Count > 0 && 
+                    !string.IsNullOrWhiteSpace(rawRequestValues[0]))
+                {
+                    rawRequestJson = rawRequestValues[0];
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "sight02 读取表单数据时发生错误");
+        }
+
+        // Immediately return success response
+        var response = new
+        {
+            success = true,
+            timestamp = DateTime.UtcNow
+        };
+
+        // Start asynchronous processing after response is sent
+        if (!string.IsNullOrWhiteSpace(rawRequestJson))
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await ProcessWebhookAsync(rawRequestJson);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "sight02 处理 webhook 数据时发生错误");
+                }
+            });
+        }
+        else
+        {
+            _logger.LogWarning("sight02 rawRequest 字段缺失，跳过异步处理");
+        }
+
+        return Ok(ApiResponseHelper.Success(response, "Webhook received successfully"));
+    }
+
+    /// <summary>
+    /// Process webhook data asynchronously.
+    /// Parses JSON from rawRequest field and validates required fields.
+    /// </summary>
+    /// <param name="rawRequestJson">JSON string from rawRequest field</param>
+    private async Task ProcessWebhookAsync(string rawRequestJson)
+    {
+        // Generate timestamp for this webhook request
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        
+        try
+        {
+            _logger.LogInformation("sight02 开始处理 Sight Webhook 数据，rawRequest 长度: {Length}, Timestamp: {Timestamp} , RawRequestJson: {RawRequestJson}", 
+                rawRequestJson.Length, 
+                timestamp,
+                rawRequestJson);
+
+            // Fix unescaped newlines in JSON string values before parsing
+            var fixedJson = FixUnescapedNewlinesInJson(rawRequestJson);
+
+            // Parse JSON
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+
+            var parsedRequest = JsonSerializer.Deserialize<WebhookRawRequestDto>(fixedJson, options);
+            
+            if (parsedRequest == null)
+            {
+                _logger.LogError("sight02 解析 rawRequest JSON 失败，返回 null. Timestamp: {Timestamp}", timestamp);
+                return;
+            }
+
+            _logger.LogInformation("sight02 解析的请求数据: TagNumber={TagNumber}, HasDate={HasDate}, HasAddress={HasAddress}, HasEmail={HasEmail}",
+                parsedRequest.TagNumber,
+                parsedRequest.Date != null,
+                !string.IsNullOrWhiteSpace(parsedRequest.Address),
+                !string.IsNullOrWhiteSpace(parsedRequest.Email));
+
+            // Validate required fields
+            var validationResult = ValidateWebhookData(parsedRequest, timestamp);
+            if (!validationResult.IsValid)
+            {
+                _logger.LogWarning("sight02 Webhook 数据验证失败: {Reason}. Timestamp: {Timestamp}", 
+                    validationResult.ErrorMessage, 
+                    timestamp);
+                return;
+            }
+
+            _logger.LogInformation("sight02 Webhook 数据验证成功，开始处理. Timestamp: {Timestamp}", timestamp);
+
+            // Process webhook data using service
+            await _webhookProcessingService.ProcessWebhookDataAsync(parsedRequest, timestamp);
+
+            _logger.LogInformation("sight02 Webhook 数据处理完成. Timestamp: {Timestamp}", timestamp);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "sight02 解析 rawRequest JSON 时发生错误: {Message}. Timestamp: {Timestamp}", 
+                ex.Message, 
+                timestamp);
+            // Error handling is done in WebhookProcessingService
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "sight02 处理 webhook 数据时发生未预期的错误: {Message}. Timestamp: {Timestamp}", 
+                ex.Message, 
+                timestamp);
+            // Error handling is done in WebhookProcessingService
+        }
+    }
+
+    /// <summary>
+    /// Validate webhook data for required fields.
+    /// </summary>
+    /// <param name="request">Parsed webhook request data</param>
+    /// <param name="timestamp">Timestamp for this webhook request</param>
+    /// <returns>Validation result</returns>
+    private (bool IsValid, string? ErrorMessage) ValidateWebhookData(WebhookRawRequestDto request, long timestamp)
+    {
+        // Validate tagNumber (q47_tagNumber47) - required
+        if (string.IsNullOrWhiteSpace(request.TagNumber))
+        {
+            _logger.LogWarning("sight02 标签号缺失. Timestamp: {Timestamp}", timestamp);
+            return (false, "Tag number (q47_tagNumber47) is required but missing");
+        }
+
+        // Validate date (q30_date) - required
+        if (request.Date == null)
+        {
+            _logger.LogError("sight02 时间数据缺失. Timestamp: {Timestamp}", timestamp);
+            return (false, "Date (q30_date) is required but missing");
+        }
+
+        // Validate date components
+        if (string.IsNullOrWhiteSpace(request.Date.Day) ||
+            string.IsNullOrWhiteSpace(request.Date.Month) ||
+            string.IsNullOrWhiteSpace(request.Date.Year))
+        {
+            _logger.LogError("sight02 时间数据不完整. Timestamp: {Timestamp}", timestamp);
+            return (false, "Date components (day, month, year) are incomplete");
+        }
+
+        _logger.LogInformation("sight02 Webhook 数据验证通过. TagNumber: {TagNumber}, Timestamp: {Timestamp}", 
+            request.TagNumber, 
+            timestamp);
+
+        return (true, null);
+    }
+
+    /// <summary>
+    /// Fix unescaped newlines in JSON string values.
+    /// JotForm may send JSON with unescaped \r\n in string values, which causes JSON parsing errors.
+    /// </summary>
+    private static string FixUnescapedNewlinesInJson(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return json;
+        }
+
+        // Use regex to escape newlines within string values
+        var result = Regex.Replace(
+            json,
+            @"""([^""\\]*(\\.[^""\\]*)*)""",
+            match =>
+            {
+                var value = match.Groups[1].Value;
+                // Escape unescaped newlines and carriage returns
+                value = value.Replace("\r\n", "\\r\\n")
+                            .Replace("\r", "\\r")
+                            .Replace("\n", "\\n");
+                return $"\"{value}\"";
+            },
+            RegexOptions.None);
+
+        return result;
+    }
+}
