@@ -324,6 +324,13 @@ public class WebhookProcessingService : IWebhookProcessingService
             }
         }
 
+        // Construct MapLocatorRaw from latitude and longitude (format: "Longitude: {lng}\nLatitude: {lat}")
+        string? mapLocatorRaw = null;
+        if (latitude.HasValue && longitude.HasValue)
+        {
+            mapLocatorRaw = $"Longitude: {longitude.Value}\nLatitude: {latitude.Value}";
+        }
+
         var entity = new SightingSubmission
         {
             SubmissionId = submissionId,
@@ -348,6 +355,7 @@ public class WebhookProcessingService : IWebhookProcessingService
             NearbyPlants = rawRequest.NearbyPlants,
             Latitude = latitude,
             Longitude = longitude,
+            MapLocatorRaw = mapLocatorRaw, // Constructed from latitude and longitude
             GpsLocationRaw = rawRequest.Address, // Store raw GPS location data
             SightingDatePretty = sightingDatePretty,
             SightingDateTimeUtc = sightingDateTimeUtc,
