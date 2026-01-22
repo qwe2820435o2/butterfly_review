@@ -346,11 +346,16 @@ export const butterflyService = {
    * This method gets all trajectory data with coordinates from the API
    * @returns Array of trajectory data grouped by tagNumber with colors
    */
-  async getAllTrajectories(): Promise<TrajectoryForMap[]> {
+  async getAllTrajectories(year?: number): Promise<TrajectoryForMap[]> {
     try {
       // Call the endpoint that returns all trajectory points (flat structure)
+      const params = new URLSearchParams();
+      if (year) {
+        params.append("year", year.toString());
+      }
+
       const response = await axiosInstance.get<ApiResponse<TrajectoryPoint[]>>(
-        `/api/Trajectories/all`
+        `/api/Trajectories/all${params.toString() ? `?${params.toString()}` : ""}`
       );
 
       if (response.data.code !== 0 || !response.data.data) {

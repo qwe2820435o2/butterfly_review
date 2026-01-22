@@ -4,6 +4,7 @@ using tennis_wave_api.Data.Interfaces;
 using tennis_wave_api.Helpers;
 using tennis_wave_api.Models;
 using tennis_wave_api.Models.DTOs;
+using tennis_wave_api.Models.Entities;
 
 namespace tennis_wave_api.Controllers;
 
@@ -75,18 +76,37 @@ public class TrajectoriesController : ControllerBase
     /// </summary>
     /// <returns>List of trajectory overview data</returns>
     [HttpGet("all")]
-    public async Task<IActionResult> GetAllTrajectories()
+    public async Task<IActionResult> GetAllTrajectories([FromQuery] int? year)
     {
         try
         {
-            // Get all release and sighting submissions with coordinates in parallel
-            var releaseTask = _releaseRepository.GetAllWithCoordinatesAsync();
-            var sightingTask = _sightingRepository.GetAllWithCoordinatesAsync();
+            Task<IReadOnlyList<ReleaseSubmission>> releaseTask;
+            Task<IReadOnlyList<SightingSubmission>> sightingTask;
+
+            if (year.HasValue)
+            {
+                // Build UTC range for the selected year
+                var startUtc = new DateTime(year.Value, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                var endUtc = startUtc.AddYears(1).AddTicks(-1);
+
+                releaseTask = _releaseRepository.GetByCreatedRangeAsync(startUtc, endUtc);
+                sightingTask = _sightingRepository.GetByCreatedRangeAsync(startUtc, endUtc);
+            }
+            else
+            {
+                // Get all release and sighting submissions with coordinates
+                releaseTask = _releaseRepository.GetAllWithCoordinatesAsync();
+                sightingTask = _sightingRepository.GetAllWithCoordinatesAsync();
+            }
             
             await Task.WhenAll(releaseTask, sightingTask);
             
-            var releases = await releaseTask;
-            var sightings = await sightingTask;
+            var releases = (await releaseTask)
+                .Where(r => r.Latitude.HasValue && r.Longitude.HasValue)
+                .ToList();
+            var sightings = (await sightingTask)
+                .Where(s => s.Latitude.HasValue && s.Longitude.HasValue)
+                .ToList();
 
             // Group releases by tagNumber
             // Business logic: A butterfly is only released once, so each tagNumber should have only one release record

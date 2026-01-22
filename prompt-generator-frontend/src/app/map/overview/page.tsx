@@ -4,7 +4,8 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { MapPin, ArrowLeft, AlertCircle } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MapPin, ArrowLeft, AlertCircle, Calendar } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { showLoading, hideLoading } from "@/store/slices/loadingSlice";
 import { toast } from "sonner";
@@ -29,19 +30,23 @@ export default function MapOverviewPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [trajectories, setTrajectories] = useState<any[]>([]);
+  const currentYear = new Date().getFullYear();
+  const startYear = 2020;
+  const yearOptions = Array.from({ length: currentYear - startYear + 1 }, (_, i) => currentYear - i);
+  const [year, setYear] = useState<number>(currentYear);
 
   useEffect(() => {
-    loadAllTrajectories();
-  }, []);
+    loadAllTrajectories(year);
+  }, [year]);
 
-  const loadAllTrajectories = async () => {
+  const loadAllTrajectories = async (targetYear: number) => {
     try {
       setIsLoading(true);
       setError(null);
       dispatch(showLoading());
 
       // Get all trajectories
-      const trajectories = await butterflyService.getAllTrajectories();
+      const trajectories = await butterflyService.getAllTrajectories(targetYear);
       setTrajectories(trajectories);
 
       if (trajectories.length === 0) {
@@ -125,9 +130,32 @@ export default function MapOverviewPage() {
               Back to Home
             </Button>
           </Link>
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">
-            All Trajectories Overview
-          </h1>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-1">
+                All Trajectories Overview
+              </h1>
+              <p className="text-gray-600 dark:text-gray-300">Select a year to view trajectories</p>
+            </div>
+            <div className="w-full md:w-48">
+              <Select
+                value={year.toString()}
+                onValueChange={(val) => setYear(parseInt(val, 10))}
+              >
+                <SelectTrigger className="w-full">
+                  <Calendar className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Select year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {yearOptions.map((y) => (
+                    <SelectItem key={y} value={y.toString()}>
+                      {y}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
 
         {/* Map Section */}
