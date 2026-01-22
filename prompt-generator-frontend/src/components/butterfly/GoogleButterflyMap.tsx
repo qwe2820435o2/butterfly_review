@@ -102,15 +102,28 @@ export default function GoogleButterflyMap({
     if (!isLoaded || typeof google === 'undefined') return;
 
     const geocodeAllPoints = async () => {
-      const geocodedRelease = releasePoint ? await geocodeAddress(releasePoint) : undefined;
-      const geocodedSightings = await Promise.all(
-        sightingPoints.map(point => geocodeAddress(point))
-      );
+      try {
+        const geocodedRelease = releasePoint ? await geocodeAddress(releasePoint) : undefined;
+        const geocodedSightings = await Promise.all(
+          sightingPoints.map(point => geocodeAddress(point))
+        );
 
-      setGeocodedPoints({
-        release: geocodedRelease,
-        sightings: geocodedSightings,
-      });
+        // Debug: Log geocoding results
+        if (releasePoint) {
+          console.log('Release point geocoding:', {
+            original: releasePoint,
+            geocoded: geocodedRelease,
+            hasCoords: geocodedRelease ? (geocodedRelease.lat !== 0 || geocodedRelease.lng !== 0) : false
+          });
+        }
+
+        setGeocodedPoints({
+          release: geocodedRelease,
+          sightings: geocodedSightings,
+        });
+      } catch (error) {
+        console.error('Error geocoding points:', error);
+      }
     };
 
     geocodeAllPoints();
@@ -132,18 +145,23 @@ export default function GoogleButterflyMap({
   }, [geocodedPoints, releasePoint, sightingPoints]);
 
   // Create trajectory path (from release to all sightings in order, use geocoded points)
+  // Only include points with valid coordinates (not 0,0)
   const trajectoryPath = useMemo(() => {
     const path: google.maps.LatLngLiteral[] = [];
     const release = geocodedPoints.release || releasePoint;
     const sightings = geocodedPoints.sightings.length > 0 ? geocodedPoints.sightings : sightingPoints;
     
-    if (release) {
+    // Add release point first if it has valid coordinates
+    if (release && (release.lat !== 0 || release.lng !== 0)) {
       path.push({ lat: release.lat, lng: release.lng });
     }
     
-    sightings.forEach((point) => {
-      path.push({ lat: point.lat, lng: point.lng });
-    });
+    // Add sighting points in order (only those with valid coordinates)
+    sightings
+      .filter(point => point.lat !== 0 || point.lng !== 0)
+      .forEach((point) => {
+        path.push({ lat: point.lat, lng: point.lng });
+      });
     
     return path;
   }, [geocodedPoints, releasePoint, sightingPoints]);
@@ -195,13 +213,15 @@ export default function GoogleButterflyMap({
     }
   }, [bounds]);
 
-  // Create marker icon (only when Google Maps is loaded)
-  const createMarkerIcon = useCallback((color: string) => {
+  // Create marker icon based on type (release = red, sighting = blue)
+  // Use same icons as OverviewMap for consistency
+  const createMarkerIcon = useCallback((type: "release" | "sighting") => {
     if (!isLoaded || typeof google === 'undefined') return undefined;
+    const iconUrl = type === "release"
+      ? "https://maps.google.com/mapfiles/ms/icons/red-dot.png"
+      : "https://maps.google.com/mapfiles/ms/icons/blue-dot.png";
     return {
-      url: color === "red" 
-        ? "https://maps.google.com/mapfiles/ms/icons/red-dot.png"
-        : "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+      url: iconUrl,
       scaledSize: new google.maps.Size(40, 40),
     };
   }, [isLoaded]);
@@ -259,6 +279,33 @@ export default function GoogleButterflyMap({
 
   return (
     <div className={className} style={{ position: 'relative' }}>
+      {/* Legend */}
+      <div className="absolute top-4 right-4 z-10 bg-white rounded-lg shadow-lg p-4 border border-gray-200">
+        <h4 className="font-semibold text-sm mb-3 text-gray-800">Legend</h4>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 flex items-center justify-center">
+              <img 
+                src="https://maps.google.com/mapfiles/ms/icons/red-dot.png" 
+                alt="Release Point"
+                className="w-6 h-6"
+              />
+            </div>
+            <span className="text-sm text-gray-700">Release Point</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 flex items-center justify-center">
+              <img 
+                src="https://maps.google.com/mapfiles/ms/icons/blue-dot.png" 
+                alt="Sighting Point"
+                className="w-6 h-6"
+              />
+            </div>
+            <span className="text-sm text-gray-700">Sighting Point</span>
+          </div>
+        </div>
+      </div>
+
       <GoogleMap
         mapContainerStyle={mapContainerStyle}
         center={center}
@@ -271,35 +318,75 @@ export default function GoogleButterflyMap({
           zoomControl: true,
         }}
       >
-        {/* Release Point Marker (Red) - Use geocoded point if available */}
-        {(geocodedPoints.release || releasePoint) && (() => {
-          const point = geocodedPoints.release || releasePoint!;
-          return (
-            <Marker
-              position={{ lat: point.lat, lng: point.lng }}
-              icon={createMarkerIcon("red")}
-              onClick={() => setSelectedPoint(point)}
-              title={point.label}
-            />
-          );
+        {/* Release Point Marker (Red) - Always show if releasePoint exists and has valid coordinates */}
+        {(() => {
+          // Use geocoded release if available, otherwise use original releasePoint
+          const release = geocodedPoints.release || releasePoint;
+          
+          if (release) {
+            // Show release marker if it exists and has valid coordinates
+            // Check both lat and lng are valid numbers and not both 0
+            const hasValidCoords = 
+              typeof release.lat === 'number' && 
+              typeof release.lng === 'number' &&
+              !isNaN(release.lat) && 
+              !isNaN(release.lng) &&
+              (release.lat !== 0 || release.lng !== 0);
+            
+            if (hasValidCoords) {
+              // Use zIndex to ensure release marker appears above sighting markers
+              return (
+                <Marker
+                  key="release-marker"
+                  position={{ lat: release.lat, lng: release.lng }}
+                  icon={createMarkerIcon("release")}
+                  onClick={() => setSelectedPoint(release)}
+                  title={release.label || "Release Point"}
+                  zIndex={1000} // Higher z-index to ensure it appears above sighting markers
+                />
+              );
+            } else {
+              // Debug: Log why release marker is not showing
+              console.warn('Release marker not shown - invalid coordinates:', {
+                release,
+                lat: release.lat,
+                lng: release.lng,
+                hasAddress: !!release.address
+              });
+            }
+          } else {
+            console.warn('Release marker not shown - no release point available');
+          }
+          return null;
         })()}
 
         {/* Sighting Points Markers (Blue) - Use geocoded points if available */}
-        {(geocodedPoints.sightings.length > 0 ? geocodedPoints.sightings : sightingPoints).map((point, index) => (
-          <Marker
-            key={`sighting-${index}`}
-            position={{ lat: point.lat, lng: point.lng }}
-            icon={createMarkerIcon("blue")}
-            onClick={() => setSelectedPoint(point)}
-            title={point.label}
-            label={{
-              text: `${index + 1}`,
-              color: "white",
-              fontSize: "12px",
-              fontWeight: "bold",
-            }}
-          />
-        ))}
+        {(geocodedPoints.sightings.length > 0 ? geocodedPoints.sightings : sightingPoints)
+          .filter(point => {
+            const hasValidCoords = 
+              typeof point.lat === 'number' && 
+              typeof point.lng === 'number' &&
+              !isNaN(point.lat) && 
+              !isNaN(point.lng) &&
+              (point.lat !== 0 || point.lng !== 0);
+            return hasValidCoords;
+          })
+          .map((point, index) => (
+            <Marker
+              key={`sighting-${index}`}
+              position={{ lat: point.lat, lng: point.lng }}
+              icon={createMarkerIcon("sighting")}
+              onClick={() => setSelectedPoint(point)}
+              title={point.label || `Sighting Point ${index + 1}`}
+              label={{
+                text: `${index + 1}`,
+                color: "white",
+                fontSize: "12px",
+                fontWeight: "bold",
+              }}
+              zIndex={100} // Lower z-index so release marker appears above
+            />
+          ))}
 
         {/* Trajectory Polyline */}
         {trajectoryPath.length > 1 && polylineOptions && (

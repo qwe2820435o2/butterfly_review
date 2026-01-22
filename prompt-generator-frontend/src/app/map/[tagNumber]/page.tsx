@@ -38,6 +38,98 @@ interface MapPoint {
   date?: string;
 }
 
+/**
+ * Parse coordinates from gpsLocationRaw string
+ * Supports two patterns:
+ * 1. "Longitude: 176.9123\nLatitude: -39.4926"
+ * 2. "... \n-39.09176, 174.10500"
+ */
+function parseCoordinatesFromGpsLocationRaw(gpsLocationRaw: string | undefined): { lat: number | null; lng: number | null } {
+  if (!gpsLocationRaw || !gpsLocationRaw.trim()) {
+    return { lat: null, lng: null };
+  }
+
+  const lower = gpsLocationRaw.toLowerCase();
+  
+  // Pattern 1: "Longitude: 176.9123\nLatitude: -39.4926"
+  if (lower.includes("longitude") && lower.includes("latitude")) {
+    const lines = gpsLocationRaw.split('\n').filter(line => line.trim());
+    let lat: number | null = null;
+    let lng: number | null = null;
+
+    for (const line of lines) {
+      // Parse Longitude
+      if (line.toLowerCase().includes("longitude")) {
+        const match = line.match(/longitude\s*:?\s*(-?\d+\.?\d*)/i);
+        if (match) {
+          const parsed = parseFloat(match[1]);
+          if (!isNaN(parsed)) {
+            lng = parsed;
+          }
+        }
+      }
+
+      // Parse Latitude
+      if (line.toLowerCase().includes("latitude")) {
+        const match = line.match(/latitude\s*:?\s*(-?\d+\.?\d*)/i);
+        if (match) {
+          const parsed = parseFloat(match[1]);
+          if (!isNaN(parsed)) {
+            lat = parsed;
+          }
+        }
+      }
+    }
+
+    if (lat !== null && lng !== null) {
+      return { lat, lng };
+    }
+  }
+
+  // Pattern 2: "... \n-39.09176, 174.10500"
+  const parts = gpsLocationRaw.split('\n').filter(part => part.trim());
+  if (parts.length > 0) {
+    const last = parts[parts.length - 1].trim();
+    const coordParts = last.split(',').map(p => p.trim());
+    
+    if (coordParts.length === 2) {
+      const lat2 = parseFloat(coordParts[0]);
+      const lng2 = parseFloat(coordParts[1]);
+      
+      if (!isNaN(lat2) && !isNaN(lng2)) {
+        return { lat: lat2, lng: lng2 };
+      }
+    }
+  }
+
+  return { lat: null, lng: null };
+}
+
+/**
+ * Get coordinates from release or sighting submission
+ * Priority: gpsLocationRaw > latitude/longitude fields
+ */
+function getCoordinates(
+  gpsLocationRaw: string | undefined,
+  latitude: number | undefined,
+  longitude: number | undefined
+): { lat: number | null; lng: number | null } {
+  // First try to parse from gpsLocationRaw
+  if (gpsLocationRaw) {
+    const coords = parseCoordinatesFromGpsLocationRaw(gpsLocationRaw);
+    if (coords.lat !== null && coords.lng !== null) {
+      return coords;
+    }
+  }
+
+  // Fall back to latitude/longitude fields
+  if (latitude !== undefined && longitude !== undefined) {
+    return { lat: latitude, lng: longitude };
+  }
+
+  return { lat: null, lng: null };
+}
+
 export default function TrajectoryPage() {
   const params = useParams();
   const dispatch = useDispatch();
@@ -90,30 +182,84 @@ export default function TrajectoryPage() {
   };
 
   // Convert data to map points (include address for geocoding)
+  // Priority: Use coordinates from gpsLocationRaw, fall back to latitude/longitude fields
   const getMapPoints = (): { releasePoint?: MapPoint; sightingPoints: MapPoint[] } => {
-    const releasePoint: MapPoint | undefined = release && (release.address || (release.latitude && release.longitude))
-      ? {
-          lat: release.latitude || 0, // Will be updated by geocoding if address is available
-          lng: release.longitude || 0,
+    let releasePoint: MapPoint | undefined = undefined;
+    
+    if (release) {
+      // Get coordinates from gpsLocationRaw first, then fall back to latitude/longitude
+      const coords = getCoordinates(release.gpsLocationRaw, release.latitude, release.longitude);
+      
+      // Debug: Log release coordinates
+      console.log('Release coordinates:', {
+        gpsLocationRaw: release.gpsLocationRaw,
+        latitude: release.latitude,
+        longitude: release.longitude,
+        parsedCoords: coords,
+        address: release.address
+      });
+      
+      if (coords.lat !== null && coords.lng !== null) {
+        releasePoint = {
+          lat: coords.lat,
+          lng: coords.lng,
           label: release.address || `Release Point`,
           address: release.address, // Include address for geocoding
           description: release.notes,
           type: "release",
           date: release.releaseDatePretty || formatDate(release.releaseDateTimeUtc)
-        }
-      : undefined;
+        };
+        console.log('Created release point with coordinates:', releasePoint);
+      } else if (release.address) {
+        // If no coordinates but has address, still create point (will be geocoded)
+        releasePoint = {
+          lat: 0, // Will be updated by geocoding
+          lng: 0,
+          label: release.address,
+          address: release.address,
+          description: release.notes,
+          type: "release",
+          date: release.releaseDatePretty || formatDate(release.releaseDateTimeUtc)
+        };
+        console.log('Created release point with address only (will be geocoded):', releasePoint);
+      } else {
+        console.warn('Release point has no coordinates and no address:', release);
+      }
+    } else {
+      console.warn('No release data available');
+    }
 
     const sightingPoints: MapPoint[] = sightings
-      .filter(s => s.address || (s.latitude && s.longitude))
-      .map((sighting, index) => ({
-        lat: sighting.latitude || 0, // Will be updated by geocoding if address is available
-        lng: sighting.longitude || 0,
-        label: sighting.address || `Sighting Point ${index + 1}`,
-        address: sighting.address, // Include address for geocoding
-        description: sighting.condition,
-        type: "sighting" as const,
-        date: sighting.sightingDatePretty || formatDate(sighting.sightingDateTimeUtc)
-      }));
+      .map((sighting, index) => {
+        // Get coordinates from gpsLocationRaw first, then fall back to latitude/longitude
+        const coords = getCoordinates(sighting.gpsLocationRaw, sighting.latitude, sighting.longitude);
+        
+        // Only include if we have coordinates or address
+        if (coords.lat !== null && coords.lng !== null) {
+          return {
+            lat: coords.lat,
+            lng: coords.lng,
+            label: sighting.address || `Sighting Point ${index + 1}`,
+            address: sighting.address, // Include address for geocoding
+            description: sighting.condition,
+            type: "sighting" as const,
+            date: sighting.sightingDatePretty || formatDate(sighting.sightingDateTimeUtc)
+          };
+        } else if (sighting.address) {
+          // If no coordinates but has address, still create point (will be geocoded)
+          return {
+            lat: 0, // Will be updated by geocoding
+            lng: 0,
+            label: sighting.address,
+            address: sighting.address,
+            description: sighting.condition,
+            type: "sighting" as const,
+            date: sighting.sightingDatePretty || formatDate(sighting.sightingDateTimeUtc)
+          };
+        }
+        return null;
+      })
+      .filter((point): point is MapPoint => point !== null);
 
     return { releasePoint, sightingPoints };
   };
