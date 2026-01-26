@@ -62,7 +62,6 @@ public class YearInReviewController : ControllerBase
                 TotalSightings = statistics.TotalSightings,
                 UniqueVolunteers = statistics.UniqueVolunteers,
                 UniqueRegions = statistics.UniqueRegions,
-                TotalFlightDistanceKm = statistics.TotalFlightDistanceKm,
                 AverageFlightDistanceKm = statistics.AverageFlightDistanceKm,
                 AverageDaysToFirstSighting = statistics.AverageDaysToFirstSighting,
                 ReleaseLocationsCount = statistics.ReleaseLocationsCount,
@@ -122,9 +121,6 @@ public class YearInReviewController : ControllerBase
                 uniqueRegions.Add(sighting.Address);
             }
         }
-
-        // Use already validated locations from GeographicDistribution
-        var validSightingLocations = geographicDistribution.SightingLocations;
 
         // Calculate distances and days to first sighting for each tag number
         var uniqueTagNumbers = releases.Select(r => r.TagNumber).Distinct().ToHashSet();
@@ -210,7 +206,6 @@ public class YearInReviewController : ControllerBase
             TotalSightings = sightings.Count,
             UniqueVolunteers = uniqueVolunteers.Count,
             UniqueRegions = uniqueRegions.Count,
-            TotalFlightDistanceKm = totalDistance,
             AverageFlightDistanceKm = averageFlightDistanceKm,
             AverageDaysToFirstSighting = averageDaysToFirstSighting,
             ReleaseLocationsCount = geographicDistribution.ReleaseLocations.Count,

@@ -44,11 +44,6 @@ public class YearInReviewDto
     public int UniqueRegions { get; set; }
 
     /// <summary>
-    /// Total flight distance in kilometers (sum of all trajectories)
-    /// </summary>
-    public double TotalFlightDistanceKm { get; set; }
-
-    /// <summary>
     /// Average flight distance in kilometers (total distance / butterflies released count)
     /// </summary>
     public double? AverageFlightDistanceKm { get; set; }
@@ -118,11 +113,6 @@ public class OverviewStatisticsDto
     /// Average survival days across all butterflies
     /// </summary>
     public double? AverageSurvivalDays { get; set; }
-
-    /// <summary>
-    /// Total flight distance in kilometers (sum of all trajectories)
-    /// </summary>
-    public double TotalFlightDistanceKm { get; set; }
 
     /// <summary>
     /// Average flight distance in kilometers (total distance / butterflies released count)
