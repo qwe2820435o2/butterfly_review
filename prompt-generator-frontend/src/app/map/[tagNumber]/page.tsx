@@ -264,52 +264,7 @@ export default function TrajectoryPage() {
     return { releasePoint, sightingPoints };
   };
 
-  // Calculate total distance
-  const calculateTotalDistance = (): number => {
-    const points = getMapPoints();
-    let totalDistance = 0;
-
-    if (points.releasePoint && points.sightingPoints.length > 0) {
-      // Calculate distance from release to first sighting
-      const firstSighting = points.sightingPoints[0];
-      totalDistance += calculateHaversineDistance(
-        points.releasePoint.lat,
-        points.releasePoint.lng,
-        firstSighting.lat,
-        firstSighting.lng
-      );
-
-      // Calculate distances between sightings
-      for (let i = 0; i < points.sightingPoints.length - 1; i++) {
-        const current = points.sightingPoints[i];
-        const next = points.sightingPoints[i + 1];
-        totalDistance += calculateHaversineDistance(
-          current.lat,
-          current.lng,
-          next.lat,
-          next.lng
-        );
-      }
-    }
-
-    return totalDistance;
-  };
-
-  // Haversine formula to calculate distance between two points
-  const calculateHaversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-    const R = 6371; // Earth's radius in km
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  };
-
   const { releasePoint, sightingPoints } = getMapPoints();
-  const totalDistance = calculateTotalDistance();
   const survivalDays = release && sightings.length > 0
     ? calculateSurvivalDays(
         release.releaseDateTimeUtc,
@@ -466,18 +421,6 @@ export default function TrajectoryPage() {
                       <p className="text-sm text-gray-600 dark:text-gray-400">Survival Days</p>
                       <p className="text-sm font-medium text-gray-900 dark:text-white">
                         {survivalDays} day(s)
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {totalDistance > 0 && (
-                  <div className="flex items-start">
-                    <MapPin className="w-4 h-4 mr-2 text-purple-600 dark:text-purple-400 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Total Flight Distance</p>
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        {totalDistance.toFixed(2)} km
                       </p>
                     </div>
                   </div>

@@ -294,31 +294,8 @@ export default function YearInReviewPage() {
               </Card>
             </ScrollReveal>
 
-            {/* Total Flight Distance */}
-            <ScrollReveal direction="up" delay={600}>
-              <Card className="shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-l-indigo-500">
-                <CardContent className="p-5">
-                  <div className="flex items-center justify-between mb-3">
-                    <TrendingUp className="w-5 h-5 text-indigo-600" />
-                    <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Flight Distance</CardTitle>
-                  </div>
-                  <div className="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mb-1">
-                    <AnimatedNumber 
-                      value={data.totalFlightDistanceKm} 
-                      duration={1500} 
-                      decimals={1}
-                    />
-                    <span className="text-lg ml-1">km</span>
-                  </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-500">
-                    Total distance traveled
-                  </p>
-                </CardContent>
-              </Card>
-            </ScrollReveal>
-
             {/* Average Flight Distance */}
-            <ScrollReveal direction="up" delay={700}>
+            <ScrollReveal direction="up" delay={600}>
               <Card className="shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-l-pink-500">
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between mb-3">
