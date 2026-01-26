@@ -150,10 +150,10 @@ public class ReleaseWebhookController02 : ControllerBase
                 return;
             }
 
+            // Save to MongoDB (insert only if tag number doesn't exist, otherwise keep existing data)
             await _releaseSubmissionRepository.UpsertByTagNumberAsync(releaseSubmission);
 
-            _logger.LogInformation("Release02 成功保存/更新 Release submission 到 MongoDB, SubmissionId: {SubmissionId}, TagNumber: {TagNumber}, Timestamp: {Timestamp}", 
-                releaseSubmission.SubmissionId, 
+            _logger.LogInformation("Release02 处理 Release submission, TagNumber: {TagNumber}, Timestamp: {Timestamp}", 
                 releaseSubmission.TagNumber,
                 timestamp);
         }

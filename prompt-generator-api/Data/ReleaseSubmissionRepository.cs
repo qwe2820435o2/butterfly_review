@@ -125,9 +125,14 @@ public class ReleaseSubmissionRepository : IReleaseSubmissionRepository
             new ReplaceOptions { IsUpsert = true });
     }
 
+    /// <summary>
+    /// Insert release submission by tag number.
+    /// If a document with the same tag number already exists, keep existing data and ignore new data (do not overwrite).
+    /// If no document exists, insert the new document.
+    /// </summary>
     public async Task UpsertByTagNumberAsync(ReleaseSubmission entity)
     {
-        // TagNumber must not be empty for upsert
+        // TagNumber must not be empty
         if (string.IsNullOrWhiteSpace(entity.TagNumber))
         {
             throw new ArgumentException("TagNumber cannot be null or empty for UpsertByTagNumberAsync", nameof(entity));
@@ -139,31 +144,18 @@ public class ReleaseSubmissionRepository : IReleaseSubmissionRepository
         var existing = await _collection.Find(filter).FirstOrDefaultAsync();
         if (existing != null)
         {
-            // Document exists: MUST use existing Id (immutable field)
-            if (!string.IsNullOrEmpty(existing.Id))
-            {
-                entity.Id = existing.Id;
-            }
-            else
-            {
-                // Existing document has null Id (corrupted data): delete and re-insert
-                await _collection.DeleteOneAsync(filter);
-                entity.Id = ObjectId.GenerateNewId().ToString();
-            }
-        }
-        else
-        {
-            // New document: generate new ObjectId if Id is null
-            if (string.IsNullOrEmpty(entity.Id))
-            {
-                entity.Id = ObjectId.GenerateNewId().ToString();
-            }
+            // Document exists: keep existing data, ignore new data (do not overwrite)
+            return;
         }
         
-        await _collection.ReplaceOneAsync(
-            filter,
-            entity,
-            new ReplaceOptions { IsUpsert = true });
+        // Document does not exist: insert new document
+        // Generate new ObjectId if Id is null
+        if (string.IsNullOrEmpty(entity.Id))
+        {
+            entity.Id = ObjectId.GenerateNewId().ToString();
+        }
+        
+        await _collection.InsertOneAsync(entity);
     }
 
     public async Task<IReadOnlyList<ReleaseSubmission>> GetByCreatedRangeAsync(
