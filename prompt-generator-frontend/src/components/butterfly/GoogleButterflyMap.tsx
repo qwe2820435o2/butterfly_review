@@ -213,13 +213,13 @@ export default function GoogleButterflyMap({
     }
   }, [bounds]);
 
-  // Create marker icon based on type (release = red, sighting = blue)
+  // Create marker icon based on type (release = green, sighting = red)
   // Use same icons as OverviewMap for consistency
   const createMarkerIcon = useCallback((type: "release" | "sighting") => {
     if (!isLoaded || typeof google === 'undefined') return undefined;
     const iconUrl = type === "release"
-      ? "https://maps.google.com/mapfiles/ms/icons/red-dot.png"
-      : "https://maps.google.com/mapfiles/ms/icons/blue-dot.png";
+      ? "https://maps.google.com/mapfiles/ms/icons/green-dot.png"
+      : "https://maps.google.com/mapfiles/ms/icons/red-dot.png";
     return {
       url: iconUrl,
       scaledSize: new google.maps.Size(40, 40),
@@ -286,7 +286,7 @@ export default function GoogleButterflyMap({
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 flex items-center justify-center">
               <img 
-                src="https://maps.google.com/mapfiles/ms/icons/red-dot.png" 
+                src="https://maps.google.com/mapfiles/ms/icons/green-dot.png" 
                 alt="Release Point"
                 className="w-6 h-6"
               />
@@ -296,7 +296,7 @@ export default function GoogleButterflyMap({
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 flex items-center justify-center">
               <img 
-                src="https://maps.google.com/mapfiles/ms/icons/blue-dot.png" 
+                src="https://maps.google.com/mapfiles/ms/icons/red-dot.png" 
                 alt="Sighting Point"
                 className="w-6 h-6"
               />

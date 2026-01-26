@@ -168,12 +168,12 @@ export default function ButterflyMap({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        {/* Release Point Marker (Red) */}
+        {/* Release Point Marker (Green) */}
         {releasePoint && (
           <Marker
             position={[releasePoint.lat, releasePoint.lng]}
             icon={L.icon({
-              iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
+              iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png",
               shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
               iconSize: [25, 41],
               iconAnchor: [12, 41],
@@ -183,7 +183,7 @@ export default function ButterflyMap({
           >
             <Popup>
               <div className="p-2">
-                <h3 className="font-bold text-red-600 mb-1">Release Point</h3>
+                <h3 className="font-bold text-green-600 mb-1">Release Point</h3>
                 <p className="text-sm">{releasePoint.label}</p>
                 {releasePoint.description && (
                   <p className="text-xs text-gray-600 mt-1">{releasePoint.description}</p>
@@ -196,13 +196,13 @@ export default function ButterflyMap({
           </Marker>
         )}
 
-        {/* Sighting Points Markers (Blue) */}
+        {/* Sighting Points Markers (Red) */}
         {sightingPoints.map((point, index) => (
           <Marker
             key={index}
             position={[point.lat, point.lng]}
             icon={L.icon({
-              iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png",
+              iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
               shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
               iconSize: [25, 41],
               iconAnchor: [12, 41],
@@ -212,7 +212,7 @@ export default function ButterflyMap({
           >
             <Popup>
               <div className="p-2">
-                <h3 className="font-bold text-blue-600 mb-1">Sighting Point #{index + 1}</h3>
+                <h3 className="font-bold text-red-600 mb-1">Sighting Point #{index + 1}</h3>
                 <p className="text-sm">{point.label}</p>
                 {point.description && (
                   <p className="text-xs text-gray-600 mt-1">{point.description}</p>

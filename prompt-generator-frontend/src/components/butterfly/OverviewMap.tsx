@@ -192,10 +192,10 @@ export default function OverviewMap({
   ) => {
     if (!isLoaded || typeof google === 'undefined') return undefined;
     
-    // Use different icons for release (red) and sighting (blue)
+    // Use different icons for release (green) and sighting (red)
     const iconUrl = type === "release"
-      ? "https://maps.google.com/mapfiles/ms/icons/red-dot.png"
-      : "https://maps.google.com/mapfiles/ms/icons/blue-dot.png";
+      ? "https://maps.google.com/mapfiles/ms/icons/green-dot.png"
+      : "https://maps.google.com/mapfiles/ms/icons/red-dot.png";
     
     // If multiple points at same location, make marker slightly larger
     const size = count > 1 ? 45 : 40;
@@ -266,7 +266,7 @@ export default function OverviewMap({
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 flex items-center justify-center">
               <img 
-                src="https://maps.google.com/mapfiles/ms/icons/red-dot.png" 
+                src="https://maps.google.com/mapfiles/ms/icons/green-dot.png" 
                 alt="Release Point"
                 className="w-6 h-6"
               />
@@ -276,7 +276,7 @@ export default function OverviewMap({
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 flex items-center justify-center">
               <img 
-                src="https://maps.google.com/mapfiles/ms/icons/blue-dot.png" 
+                src="https://maps.google.com/mapfiles/ms/icons/red-dot.png" 
                 alt="Sighting Point"
                 className="w-6 h-6"
               />

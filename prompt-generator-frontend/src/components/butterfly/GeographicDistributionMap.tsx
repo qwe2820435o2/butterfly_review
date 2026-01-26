@@ -247,13 +247,13 @@ export default function GeographicDistributionMap({
           />
         )}
 
-        {/* Release Locations (Red Markers) */}
+        {/* Release Locations (Green Markers) */}
         {geographicDistribution.releaseLocations.map((location, index) => (
           <Marker
             key={`release-${index}`}
             position={[location.latitude, location.longitude]}
             icon={L.icon({
-              iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
+              iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png",
               shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
               iconSize: [20, 35],
               iconAnchor: [10, 35],
@@ -263,7 +263,7 @@ export default function GeographicDistributionMap({
           >
             <Popup>
               <div className="p-2 min-w-[150px]">
-                <h3 className="font-bold text-red-600 mb-1 text-sm">Release Point</h3>
+                <h3 className="font-bold text-green-600 mb-1 text-sm">Release Point</h3>
                 {location.address && (
                   <p className="text-xs text-gray-700 mb-1">{location.address}</p>
                 )}
@@ -278,13 +278,13 @@ export default function GeographicDistributionMap({
           </Marker>
         ))}
 
-        {/* Sighting Locations (Blue Markers) */}
+        {/* Sighting Locations (Red Markers) */}
         {geographicDistribution.sightingLocations.map((location, index) => (
           <Marker
             key={`sighting-${index}`}
             position={[location.latitude, location.longitude]}
             icon={L.icon({
-              iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png",
+              iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
               shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
               iconSize: [18, 30],
               iconAnchor: [9, 30],
@@ -294,7 +294,7 @@ export default function GeographicDistributionMap({
           >
             <Popup>
               <div className="p-2 min-w-[150px]">
-                <h3 className="font-bold text-blue-600 mb-1 text-sm">Sighting Point</h3>
+                <h3 className="font-bold text-red-600 mb-1 text-sm">Sighting Point</h3>
                 {location.address && (
                   <p className="text-xs text-gray-700 mb-1">{location.address}</p>
                 )}

@@ -353,7 +353,7 @@ export default function TrajectoryPage() {
               <CardHeader>
                 <CardTitle>Flight Trajectory Map</CardTitle>
                 <CardDescription>
-                  Red markers: Release points | Blue markers: Sighting points | Orange lines: Flight paths
+                  Green markers: Release points | Red markers: Sighting points | Orange lines: Flight paths
                 </CardDescription>
               </CardHeader>
               <CardContent>
