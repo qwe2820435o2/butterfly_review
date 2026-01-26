@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Search, AlertCircle, Sparkles, Eye } from "lucide-react";
@@ -20,6 +20,8 @@ export default function SearchPage() {
   const [showSightingTagsDialog, setShowSightingTagsDialog] = useState(false);
   const [searchType, setSearchType] = useState<"email" | "tagNumber">("email");
   const [searchQuery, setSearchQuery] = useState("");
+  const [highlightedTag, setHighlightedTag] = useState<string | null>(null);
+  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const dispatch = useDispatch();
 
   /**
@@ -91,6 +93,43 @@ export default function SearchPage() {
     // Navigation is handled by Link in TagNumberCard
     // This callback can be used for analytics or other side effects
     console.log("Viewing trajectory for:", tagNumber);
+  };
+
+  /**
+   * Handle tag number click in dialog - scroll to corresponding card
+   */
+  const handleTagNumberClick = (tagNumber: string) => {
+    // Close dialog
+    setShowSightingTagsDialog(false);
+    
+    // Wait for dialog to close, then scroll to card
+    setTimeout(() => {
+      const cardElement = cardRefs.current.get(tagNumber);
+      if (cardElement) {
+        // Scroll to card with smooth behavior
+        cardElement.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        });
+        
+        // Highlight the card temporarily
+        setHighlightedTag(tagNumber);
+        setTimeout(() => {
+          setHighlightedTag(null);
+        }, 2000); // Remove highlight after 2 seconds
+      }
+    }, 100);
+  };
+
+  /**
+   * Set card ref
+   */
+  const setCardRef = (tagNumber: string, element: HTMLDivElement | null) => {
+    if (element) {
+      cardRefs.current.set(tagNumber, element);
+    } else {
+      cardRefs.current.delete(tagNumber);
+    }
   };
 
   return (
@@ -167,7 +206,7 @@ export default function SearchPage() {
                           Tags with Sightings
                         </DialogTitle>
                         <DialogDescription>
-                          All tags with their sighting counts (sorted by sighting count, descending)
+                          All tags with their sighting counts (sorted by sighting count, descending). Click on a tag number to scroll to its details.
                         </DialogDescription>
                       </DialogHeader>
                       <div className="mt-4">
@@ -177,7 +216,9 @@ export default function SearchPage() {
                           .map((result) => (
                             <div
                               key={result.tagNumber}
-                              className="flex items-center justify-between p-3 mb-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                              onClick={() => handleTagNumberClick(result.tagNumber)}
+                              className="flex items-center justify-between p-3 mb-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-orange-400 dark:hover:border-orange-600 transition-all cursor-pointer"
+                              title={`Click to scroll to ${result.tagNumber} details`}
                             >
                               <div className="flex-1">
                                 <div className="font-semibold text-gray-900 dark:text-white">
@@ -215,11 +256,20 @@ export default function SearchPage() {
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {searchResults.map((summary) => (
-                      <TagNumberCard
+                      <div
                         key={summary.tagNumber}
-                        summary={summary}
-                        onViewTrajectory={handleViewTrajectory}
-                      />
+                        ref={(el) => setCardRef(summary.tagNumber, el)}
+                        className={`transition-all duration-500 ${
+                          highlightedTag === summary.tagNumber
+                            ? 'ring-4 ring-orange-500 dark:ring-orange-400 rounded-2xl shadow-2xl scale-105'
+                            : ''
+                        }`}
+                      >
+                        <TagNumberCard
+                          summary={summary}
+                          onViewTrajectory={handleViewTrajectory}
+                        />
+                      </div>
                     ))}
                   </div>
                 </>
