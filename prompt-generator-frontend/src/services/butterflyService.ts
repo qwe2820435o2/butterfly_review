@@ -255,6 +255,75 @@ export const butterflyService = {
   },
 
   /**
+   * Search for tag numbers by tag number and return summary
+   * This is a convenience method that combines release and sighting data
+   * @param tagNumber Tag number to search for
+   * @returns Array of tag number summaries with statistics (usually contains one item)
+   */
+  async searchTagNumbersByTagNumber(tagNumber: string): Promise<TagNumberSummary[]> {
+    try {
+      // Normalize tag number to uppercase
+      const normalizedTagNumber = tagNumber.trim().toUpperCase();
+
+      // Fetch both release and sighting data in parallel
+      const [releases, sightings] = await Promise.all([
+        this.getReleaseSubmissionsByTagNumber(normalizedTagNumber, false),
+        this.getSightingSubmissionsByTagNumber(normalizedTagNumber, false)
+      ]);
+
+      // If no releases found, return empty array
+      if (releases.length === 0) {
+        return [];
+      }
+
+      // Get the latest release
+      const release = releases.reduce((latest, current) => {
+        if (!latest.releaseDateTimeUtc) return current;
+        if (!current.releaseDateTimeUtc) return latest;
+        return new Date(current.releaseDateTimeUtc) > new Date(latest.releaseDateTimeUtc)
+          ? current
+          : latest;
+      });
+
+      // Sort sightings by date
+      const sortedSightings = [...sightings].sort((a, b) => {
+        const dateA = a.sightingDateTimeUtc ? new Date(a.sightingDateTimeUtc).getTime() : 0;
+        const dateB = b.sightingDateTimeUtc ? new Date(b.sightingDateTimeUtc).getTime() : 0;
+        return dateA - dateB;
+      });
+
+      const lastSighting = sortedSightings.length > 0 ? sortedSightings[sortedSightings.length - 1] : null;
+
+      const status = getButterflyStatus(release, sortedSightings);
+      const survivalDays = calculateSurvivalDays(
+        release.releaseDateTimeUtc,
+        lastSighting?.sightingDateTimeUtc
+      );
+
+      const summary: TagNumberSummary = {
+        tagNumber: normalizedTagNumber,
+        releaseDate: release.releaseDateTimeUtc,
+        releaseDatePretty: release.releaseDatePretty,
+        lastSightingDate: lastSighting?.sightingDateTimeUtc,
+        lastSightingDatePretty: lastSighting?.sightingDatePretty,
+        status: status,
+        sightingCount: sortedSightings.length,
+        survivalDays: survivalDays,
+        releaseLocation: release.latitude && release.longitude ? {
+          latitude: release.latitude,
+          longitude: release.longitude,
+          address: release.address
+        } : undefined
+      };
+
+      return [summary];
+    } catch (error) {
+      console.error('Error searching tag numbers by tag number:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Get complete trajectory data for a tag number
    * This combines release and sighting data to provide trajectory information
    * @param tagNumber Tag number to get trajectory for

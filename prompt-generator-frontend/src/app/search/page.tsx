@@ -8,7 +8,7 @@ import { useDispatch } from "react-redux";
 import { showLoading, hideLoading } from "@/store/slices/loadingSlice";
 import { toast } from "sonner";
 import { AxiosError } from "axios";
-import EmailSearchForm from "@/components/butterfly/EmailSearchForm";
+import SearchForm from "@/components/butterfly/SearchForm";
 import TagNumberCard from "@/components/butterfly/TagNumberCard";
 import { butterflyService } from "@/services/butterflyService";
 import { TagNumberSummary } from "@/types/butterfly";
@@ -18,29 +18,43 @@ export default function SearchPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [showSightingTagsDialog, setShowSightingTagsDialog] = useState(false);
+  const [searchType, setSearchType] = useState<"email" | "tagNumber">("email");
+  const [searchQuery, setSearchQuery] = useState("");
   const dispatch = useDispatch();
 
   /**
-   * Handle email search
+   * Handle search (email or tag number)
    */
-  const handleSearch = async (email: string) => {
+  const handleSearch = async (query: string, type: "email" | "tagNumber") => {
     try {
       setIsLoading(true);
       dispatch(showLoading());
       setHasSearched(false);
+      setSearchType(type);
+      setSearchQuery(query);
 
-      const results = await butterflyService.searchTagNumbersByEmail(email);
+      let results: TagNumberSummary[];
+      
+      if (type === "email") {
+        results = await butterflyService.searchTagNumbersByEmail(query);
+      } else {
+        results = await butterflyService.searchTagNumbersByTagNumber(query);
+      }
       
       setSearchResults(results);
       setHasSearched(true);
 
       if (results.length === 0) {
         toast.info("No records found", {
-          description: `No butterfly tags associated with email ${email}`
+          description: type === "email" 
+            ? `No butterfly tags associated with email ${query}`
+            : `No butterfly tags found for tag number ${query}`
         });
       } else {
         toast.success(`Found ${results.length} tag(s)`, {
-          description: `Found ${results.length} butterfly tag(s) associated with your email`
+          description: type === "email"
+            ? `Found ${results.length} butterfly tag(s) associated with your email`
+            : `Found butterfly tag ${query}`
         });
       }
     } catch (error) {
@@ -53,7 +67,9 @@ export default function SearchPage() {
       if (error && typeof error === "object" && "isAxiosError" in error) {
         const axiosError = error as AxiosError;
         if (axiosError.response?.status === 400) {
-          errorMessage = "Invalid request parameters, please check email format";
+          errorMessage = type === "email"
+            ? "Invalid request parameters, please check email format"
+            : "Invalid request parameters, please check tag number format";
         } else if (axiosError.response?.status === 404) {
           errorMessage = "No records found";
         } else if (axiosError.response?.status === 500) {
@@ -90,7 +106,7 @@ export default function SearchPage() {
               Find My Butterfly Tags
             </h1>
             <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Enter your email address to find your released butterfly tags and view their flight trajectories
+              Enter your email address or tag number to find your released butterfly tags and view their flight trajectories
             </p>
           </div>
 
@@ -99,11 +115,11 @@ export default function SearchPage() {
             <CardHeader>
               <CardTitle>Search</CardTitle>
               <CardDescription>
-                Please enter your email
+                Enter your email address or tag number
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <EmailSearchForm 
+              <SearchForm 
                 onSearch={handleSearch} 
                 isLoading={isLoading}
               />
@@ -219,7 +235,9 @@ export default function SearchPage() {
                           No Records Found
                         </h3>
                         <p className="text-gray-600 dark:text-gray-300 max-w-md">
-                          No butterfly tags are associated with this email address. Please verify that the email address is correct, or this email may not have participated in the butterfly release project.
+                          {searchType === "email"
+                            ? "No butterfly tags are associated with this email address. Please verify that the email address is correct, or this email may not have participated in the butterfly release project."
+                            : `No butterfly tags found for tag number "${searchQuery}". Please verify that the tag number is correct.`}
                         </p>
                       </div>
                     </div>
@@ -242,11 +260,15 @@ export default function SearchPage() {
                 <ul className="space-y-3 text-gray-600 dark:text-gray-300">
                   <li className="flex items-start">
                     <span className="mr-2">•</span>
-                    <span>Enter the email address you used for registration to search</span>
+                    <span>Search by email address: Enter the email address you used for registration to find all associated butterfly tags</span>
                   </li>
                   <li className="flex items-start">
                     <span className="mr-2">•</span>
-                    <span>The system will display all butterfly tag numbers associated with that email</span>
+                    <span>Search by tag number: Enter a specific tag number (e.g., WAA187) to find that butterfly's information</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="mr-2">•</span>
+                    <span>The system will display all butterfly tag numbers matching your search</span>
                   </li>
                   <li className="flex items-start">
                     <span className="mr-2">•</span>
