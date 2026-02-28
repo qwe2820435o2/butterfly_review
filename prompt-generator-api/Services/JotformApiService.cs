@@ -1,4 +1,4 @@
-﻿using System.Net.Http;
+using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
@@ -33,9 +33,19 @@ public class JotformApiService : IJotformApiService
         return GetSubmissionsPageAsync(_settings.ReleaseFormId, offset, limit, cancellationToken);
     }
 
+    public Task<JotformApiResponseDto> GetReleaseSubmissionsPageAsync(string releaseFormId, int offset, int limit, CancellationToken cancellationToken = default)
+    {
+        return GetSubmissionsPageAsync(releaseFormId, offset, limit, cancellationToken);
+    }
+
     public Task<JotformApiResponseDto> GetSightingSubmissionsPageAsync(int offset, int limit, CancellationToken cancellationToken = default)
     {
         return GetSubmissionsPageAsync(_settings.SightingFormId, offset, limit, cancellationToken);
+    }
+
+    public Task<JotformApiResponseDto> GetSightingSubmissionsPageAsync(string sightFormId, int offset, int limit, CancellationToken cancellationToken = default)
+    {
+        return GetSubmissionsPageAsync(sightFormId, offset, limit, cancellationToken);
     }
 
     private async Task<JotformApiResponseDto> GetSubmissionsPageAsync(string formId, int offset, int limit, CancellationToken cancellationToken)

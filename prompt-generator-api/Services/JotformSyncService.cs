@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using tennis_wave_api.Data.Interfaces;
@@ -36,6 +36,7 @@ public class JotformSyncService : IJotformSyncService
     }
 
     public async Task<int> SyncReleaseSubmissionsAsync(
+        string releaseFormId,
         DateTime startUtc,
         DateTime endUtc,
         CancellationToken cancellationToken = default)
@@ -45,12 +46,12 @@ public class JotformSyncService : IJotformSyncService
         var limit = _settings.PageSize > 0 ? _settings.PageSize : 100;
         var pageNumber = 0;
 
-        _logger.LogInformation("Starting Release form sync. Time range: {StartUtc} to {EndUtc}", startUtc, endUtc);
+        _logger.LogInformation("Starting Release form sync. FormId: {ReleaseFormId}, Time range: {StartUtc} to {EndUtc}", releaseFormId, startUtc, endUtc);
 
         while (true)
         {
             pageNumber++;
-            var page = await _apiService.GetReleaseSubmissionsPageAsync(offset, limit, cancellationToken);
+            var page = await _apiService.GetReleaseSubmissionsPageAsync(releaseFormId, offset, limit, cancellationToken);
 
             if (page.Content == null || page.Content.Count == 0)
             {
@@ -117,6 +118,7 @@ public class JotformSyncService : IJotformSyncService
     }
 
     public async Task<int> SyncSightingSubmissionsAsync(
+        string sightFormId,
         DateTime startUtc,
         DateTime endUtc,
         CancellationToken cancellationToken = default)
@@ -126,12 +128,12 @@ public class JotformSyncService : IJotformSyncService
         var limit = _settings.PageSize > 0 ? _settings.PageSize : 100;
         var pageNumber = 0;
 
-        _logger.LogInformation("Starting Sighting form sync. Time range: {StartUtc} to {EndUtc}", startUtc, endUtc);
+        _logger.LogInformation("Starting Sighting form sync. FormId: {SightFormId}, Time range: {StartUtc} to {EndUtc}", sightFormId, startUtc, endUtc);
 
         while (true)
         {
             pageNumber++;
-            var page = await _apiService.GetSightingSubmissionsPageAsync(offset, limit, cancellationToken);
+            var page = await _apiService.GetSightingSubmissionsPageAsync(sightFormId, offset, limit, cancellationToken);
 
             if (page.Content == null || page.Content.Count == 0)
             {

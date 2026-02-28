@@ -1,4 +1,4 @@
-﻿using tennis_wave_api.Models.Entities;
+using tennis_wave_api.Models.Entities;
 
 namespace tennis_wave_api.Services.Interfaces;
 
@@ -7,7 +7,7 @@ namespace tennis_wave_api.Services.Interfaces;
 /// </summary>
 public interface IJotformSyncService
 {
-    Task<int> SyncReleaseSubmissionsAsync(DateTime startUtc, DateTime endUtc, CancellationToken cancellationToken = default);
+    Task<int> SyncReleaseSubmissionsAsync(string releaseFormId, DateTime startUtc, DateTime endUtc, CancellationToken cancellationToken = default);
 
-    Task<int> SyncSightingSubmissionsAsync(DateTime startUtc, DateTime endUtc, CancellationToken cancellationToken = default);
+    Task<int> SyncSightingSubmissionsAsync(string sightFormId, DateTime startUtc, DateTime endUtc, CancellationToken cancellationToken = default);
 }

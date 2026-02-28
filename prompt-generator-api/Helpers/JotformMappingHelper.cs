@@ -1,5 +1,6 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using tennis_wave_api.Models.DTOs;
 using tennis_wave_api.Models.Entities;
@@ -31,11 +32,11 @@ public class JotformMappingHelper
             ? createdUtc
             : DateTime.UtcNow;
 
-        // Email: field "17"
-        entity.Email = GetStringAnswer(raw, "17");
+        // Email: field "43"
+        entity.Email = GetStringAnswer(raw, "43");
 
-        // Tag number: field "27" (name: tagNo)
-        entity.TagNumber = GetStringAnswer(raw, "27") ?? string.Empty;
+        // Tag number: field "44" (name: tagNo)
+        entity.TagNumber = GetStringAnswer(raw, "44") ?? string.Empty;
 
         // Release date/time: field "20" -> answer.datetime
         var dateAnswer = GetAnswerObject(raw, "20");
@@ -109,7 +110,7 @@ public class JotformMappingHelper
             : DateTime.UtcNow;
 
         // Basic contact info
-        entity.Email = GetStringAnswer(raw, "17");
+        entity.Email = GetStringAnswer(raw, "48");
 
         var nameAnswer = GetAnswer(raw, "19");
         if (!string.IsNullOrWhiteSpace(nameAnswer?.PrettyFormat))
@@ -123,8 +124,8 @@ public class JotformMappingHelper
             entity.Phone = phone;
         }
 
-        // Tag number: field "25"
-        entity.TagNumber = GetStringAnswer("25", raw) ?? string.Empty;
+        // Tag number: field "47"
+        entity.TagNumber = GetStringAnswer("47", raw) ?? string.Empty;
 
         // Sighting date/time: field "30" -> answer.datetime
         var dateAnswer = GetAnswerObject(raw, "30");
@@ -139,7 +140,6 @@ public class JotformMappingHelper
         // Condition, dead/alive, nearby butterflies, plants
         entity.Condition = GetStringAnswer("24", raw);
         entity.DeadOrAlive = GetStringAnswer("28", raw);
-        entity.NearbyButterflies = GetStringAnswer("27", raw);
         entity.NearbyPlants = GetStringAnswer("14", raw);
 
         // Weather info (sun, wind)
