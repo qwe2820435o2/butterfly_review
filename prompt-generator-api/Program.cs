@@ -199,6 +199,7 @@ builder.Services.AddHttpClient();
 
 // Register background tasks
 builder.Services.AddHostedService<tennis_wave_api.Tasks.TagNumberNormalizationTask>();
+builder.Services.AddHostedService<tennis_wave_api.Tasks.JotformSubmissionSyncTask>();
 
 
 var app = builder.Build();
