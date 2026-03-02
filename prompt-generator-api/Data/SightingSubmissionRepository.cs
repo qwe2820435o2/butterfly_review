@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using tennis_wave_api.Data.Interfaces;
@@ -140,7 +140,7 @@ public class SightingSubmissionRepository : ISightingSubmissionRepository
         DateTime? startUtc,
         DateTime? endUtc)
     {
-        var filter = Builders<SightingSubmission>.Filter.Empty;
+        var filter = Builders<SightingSubmission>.Filter.Ne(x => x.Status, "DELETED");
 
         if (startUtc.HasValue)
         {
@@ -196,14 +196,15 @@ public class SightingSubmissionRepository : ISightingSubmissionRepository
 
     public async Task<IReadOnlyList<SightingSubmission>> GetAllWithCoordinatesAsync()
     {
-        // Get all sighting submissions that have coordinates
+        // Get all sighting submissions that have coordinates and are not deleted
         // Use $exists filter which works better with sparse indexes
         // $exists: true already excludes null values, so we don't need $ne: null
         var filter = Builders<SightingSubmission>.Filter.And(
             Builders<SightingSubmission>.Filter.Exists(x => x.Latitude),
             Builders<SightingSubmission>.Filter.Exists(x => x.Longitude),
             Builders<SightingSubmission>.Filter.Type(x => x.Latitude, BsonType.Double),
-            Builders<SightingSubmission>.Filter.Type(x => x.Longitude, BsonType.Double)
+            Builders<SightingSubmission>.Filter.Type(x => x.Longitude, BsonType.Double),
+            Builders<SightingSubmission>.Filter.Ne(x => x.Status, "DELETED")
         );
 
         // Use projection to only return fields needed for trajectory calculation
