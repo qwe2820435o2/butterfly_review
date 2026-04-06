@@ -122,6 +122,11 @@ export const getButterflyStatus = (
   release: ReleaseSubmission,
   sightings: SightingSubmission[]
 ): 'Alive' | 'Dead' | 'Unknown' => {
+  // Soft-deleted releases must not show as Alive/Dead from sightings alone
+  if (release.status && release.status.toUpperCase() === 'DELETED') {
+    return 'Unknown';
+  }
+
   if (sightings.length === 0) {
     return 'Unknown';
   }

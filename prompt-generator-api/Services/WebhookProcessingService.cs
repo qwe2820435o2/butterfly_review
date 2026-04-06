@@ -74,7 +74,7 @@ public class WebhookProcessingService : IWebhookProcessingService
 
             // Find release submission from MongoDB
             _logger.LogInformation("开始从 MongoDB 查找 Release submission, TagNumber: {TagNumber}", tagNumber);
-            var releaseSubmissions = await _releaseSubmissionRepository.GetByTagNumberAsync(tagNumber);
+            var releaseSubmissions = await _releaseSubmissionRepository.GetByTagNumberIncludingDeletedAsync(tagNumber);
             
             // Filter by case-insensitive match (MongoDB query is case-sensitive)
             var releaseSubmission = releaseSubmissions
