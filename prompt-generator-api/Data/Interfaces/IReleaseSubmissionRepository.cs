@@ -23,6 +23,11 @@ public interface IReleaseSubmissionRepository
 
     Task<IReadOnlyList<ReleaseSubmission>> GetByTagNumberAsync(string tagNumber);
 
+    /// <summary>
+    /// Same as <see cref="GetByTagNumberAsync"/> but includes submissions with status DELETED (e.g. webhook processing).
+    /// </summary>
+    Task<IReadOnlyList<ReleaseSubmission>> GetByTagNumberIncludingDeletedAsync(string tagNumber);
+
     Task<IReadOnlyList<ReleaseSubmission>> GetAllWithCoordinatesAsync();
 
     Task DeleteByIdAsync(string id);

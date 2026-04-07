@@ -10,7 +10,8 @@ import {
 } from '@/types/butterfly';
 import {
   getButterflyStatus,
-  calculateSurvivalDays
+  calculateSurvivalDays,
+  isReleaseSoftDeleted
 } from '@/types/butterfly';
 
 /**
@@ -36,8 +37,9 @@ export const butterflyService = {
     const response = await axiosInstance.get<ApiResponse<ReleaseSubmission[]>>(
       `/api/ReleaseSubmissions?${params}`
     );
-    
-    return response.data.data || [];
+
+    const list = response.data.data || [];
+    return list.filter((r) => !isReleaseSoftDeleted(r.status));
   },
 
   /**
@@ -80,8 +82,9 @@ export const butterflyService = {
     const response = await axiosInstance.get<ApiResponse<ReleaseSubmission[]>>(
       `/api/ReleaseSubmissions?${params}`
     );
-    
-    return response.data.data || [];
+
+    const list = response.data.data || [];
+    return list.filter((r) => !isReleaseSoftDeleted(r.status));
   },
 
   /**

@@ -116,14 +116,21 @@ export interface TagNumberSummary {
 }
 
 /**
+ * True when API release status indicates a soft-deleted submission (any casing, trimmed).
+ */
+export const isReleaseSoftDeleted = (status: string | undefined): boolean =>
+  typeof status === 'string' &&
+  status.trim().length > 0 &&
+  status.trim().toLowerCase() === 'deleted';
+
+/**
  * Helper function to determine butterfly status
  */
 export const getButterflyStatus = (
   release: ReleaseSubmission,
   sightings: SightingSubmission[]
 ): 'Alive' | 'Dead' | 'Unknown' => {
-  // Soft-deleted releases must not show as Alive/Dead from sightings alone
-  if (release.status && release.status.toUpperCase() === 'DELETED') {
+  if (isReleaseSoftDeleted(release.status)) {
     return 'Unknown';
   }
 

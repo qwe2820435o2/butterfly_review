@@ -2,6 +2,7 @@ using System.Linq;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using tennis_wave_api.Data.Interfaces;
+using tennis_wave_api.Helpers;
 using tennis_wave_api.Models.Entities;
 
 namespace tennis_wave_api.Data;
@@ -162,7 +163,7 @@ public class ReleaseSubmissionRepository : IReleaseSubmissionRepository
         DateTime? startUtc,
         DateTime? endUtc)
     {
-        var filter = Builders<ReleaseSubmission>.Filter.Ne(x => x.Status, "DELETED");
+        var filter = ReleaseSubmissionSoftDeleteHelper.NotSoftDeletedFilter();
 
         if (startUtc.HasValue)
         {
@@ -196,7 +197,10 @@ public class ReleaseSubmissionRepository : IReleaseSubmissionRepository
 
     public async Task<IReadOnlyList<ReleaseSubmission>> GetByEmailAsync(string email)
     {
-        var filter = Builders<ReleaseSubmission>.Filter.Eq(x => x.Email, email);
+        var filter = Builders<ReleaseSubmission>.Filter.And(
+            Builders<ReleaseSubmission>.Filter.Eq(x => x.Email, email),
+            ReleaseSubmissionSoftDeleteHelper.NotSoftDeletedFilter());
+
         var list = await _collection
             .Find(filter)
             .SortByDescending(x => x.CreatedAtUtc)
@@ -206,6 +210,20 @@ public class ReleaseSubmissionRepository : IReleaseSubmissionRepository
     }
 
     public async Task<IReadOnlyList<ReleaseSubmission>> GetByTagNumberAsync(string tagNumber)
+    {
+        var filter = Builders<ReleaseSubmission>.Filter.And(
+            Builders<ReleaseSubmission>.Filter.Eq(x => x.TagNumber, tagNumber),
+            ReleaseSubmissionSoftDeleteHelper.NotSoftDeletedFilter());
+
+        var list = await _collection
+            .Find(filter)
+            .SortByDescending(x => x.CreatedAtUtc)
+            .ToListAsync();
+
+        return list;
+    }
+
+    public async Task<IReadOnlyList<ReleaseSubmission>> GetByTagNumberIncludingDeletedAsync(string tagNumber)
     {
         var filter = Builders<ReleaseSubmission>.Filter.Eq(x => x.TagNumber, tagNumber);
         var list = await _collection
@@ -226,7 +244,7 @@ public class ReleaseSubmissionRepository : IReleaseSubmissionRepository
             Builders<ReleaseSubmission>.Filter.Exists(x => x.Longitude),
             Builders<ReleaseSubmission>.Filter.Type(x => x.Latitude, BsonType.Double),
             Builders<ReleaseSubmission>.Filter.Type(x => x.Longitude, BsonType.Double),
-            Builders<ReleaseSubmission>.Filter.Ne(x => x.Status, "DELETED")
+            ReleaseSubmissionSoftDeleteHelper.NotSoftDeletedFilter()
         );
 
         // Use projection to only return fields needed for trajectory calculation
