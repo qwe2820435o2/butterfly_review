@@ -60,6 +60,10 @@ public class ReleaseSubmissionsController : ControllerBase
                 submissions = await _repository.GetByTagNumberAsync(tagNumber!);
             }
 
+            submissions = submissions
+                .Where(s => !ReleaseSubmissionSoftDeleteHelper.IsSoftDeleted(s.Status))
+                .ToList();
+
             // Remove answers field if not requested
             if (!includeAnswers)
             {
