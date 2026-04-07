@@ -28,7 +28,12 @@ public class GmailService : IGmailService
         _logger = logger;
     }
 
-    public async Task SendEmailAsync(string[] to, string subject, string bodyHtml, CancellationToken cancellationToken = default)
+    public async Task SendEmailAsync(
+        string[] to,
+        string subject,
+        string bodyHtml,
+        string? replyTo = null,
+        CancellationToken cancellationToken = default)
     {
         try
         {
@@ -42,6 +47,11 @@ public class GmailService : IGmailService
             var email = new StringBuilder();
             email.Append($"To: {recipients}\r\n");
             email.Append($"Subject: {subject}\r\n");
+            if (!string.IsNullOrWhiteSpace(replyTo))
+            {
+                email.Append($"Reply-To: {replyTo.Trim()}\r\n");
+            }
+
             email.Append("MIME-Version: 1.0\r\n");
             email.Append("Content-Type: text/html; charset=utf-8\r\n");
             email.Append("\r\n");

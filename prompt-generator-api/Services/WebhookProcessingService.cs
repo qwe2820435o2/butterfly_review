@@ -1,5 +1,7 @@
 using System.Globalization;
 using System.Linq;
+using System.Net;
+using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using tennis_wave_api.Data.Interfaces;
@@ -72,6 +74,23 @@ public class WebhookProcessingService : IWebhookProcessingService
             tagNumber = tagNumber.ToUpperInvariant();
             _logger.LogInformation("标准化后的标签号: {TagNumber}", tagNumber);
 
+            // send confirmation email to user
+            if (!string.IsNullOrWhiteSpace(rawRequest.Email))
+            {
+                var emails = new List<string>();
+                //emails.Add(rawRequest.Email);
+                emails.Add("hi.travis.nong@gmail.com");
+
+                var content = BuildEmailContent02(rawRequest, tagNumber, timestamp);
+
+                await _gmailService.SendEmailAsync(
+                    emails.ToArray(),
+                    "Re: Tagged Butterfly Sighting",
+                    content,
+                    GetGmailReplyToOrNull(),
+                    cancellationToken);
+            }
+            
             // Find release submission from MongoDB
             _logger.LogInformation("开始从 MongoDB 查找 Release submission, TagNumber: {TagNumber}", tagNumber);
             var releaseSubmissions = await _releaseSubmissionRepository.GetByTagNumberIncludingDeletedAsync(tagNumber);
@@ -89,25 +108,6 @@ public class WebhookProcessingService : IWebhookProcessingService
                     "Tag has not been entered",
                     $"{tagNumber} has not been entered yet. UniqueID: {timestamp}",
                     cancellationToken);
-                
-                // send confirmation email to user
-                if (!string.IsNullOrWhiteSpace(rawRequest.Email))
-                {
-                    var emails = new List<string>();
-                    emails.Add(rawRequest.Email);
-                    emails.Add("hi.travis.nong@gmail.com");
-                    
-                    var seenTime = $"{rawRequest.Date.Day}-{rawRequest.Date.Month}-{rawRequest.Date.Year} {rawRequest.Date.TimeInput} {rawRequest.Date.AmPm}";
-                    var seenAddress = rawRequest.Address ?? "Unknown location";
-                    
-                    var content = BuildEmailContent02(tagNumber, seenTime, seenAddress, timestamp);
-
-                    await _gmailService.SendEmailAsync(
-                        emails.ToArray(),
-                        "Re: Tagged Butterfly Sighting",
-                        content,
-                        cancellationToken);
-                }
                 
                 return;
             }
@@ -166,6 +166,7 @@ public class WebhookProcessingService : IWebhookProcessingService
                 recipientEmails.ToArray(),
                 "Re: Tagged Butterfly Sighting",
                 emailContent,
+                null,
                 cancellationToken);
 
             // Save sighting submission to MongoDB
@@ -252,38 +253,123 @@ public class WebhookProcessingService : IWebhookProcessingService
         ";
     }
     
-    private static string BuildEmailContent02(
-        string tagNumber,
-        string seenOfTime,
-        string seenOfTimeAddress,
-        long timestamp)
+    /// <summary>
+    /// First confirmation email: lists the sighting details the submitter entered in Jotform (no release/match narrative).
+    /// </summary>
+    private static string BuildEmailContent02(WebhookRawRequestDto rawRequest, string tagNumber, long timestamp)
     {
+        var rows = new StringBuilder();
+        void Row(string label, string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return;
+            }
+
+            rows.Append(
+                "<tr><td style=\"padding:6px 12px;border:1px solid #ddd;font-weight:600;vertical-align:top;background:#f9f9f9;\">");
+            rows.Append(HtmlEncode(label));
+            rows.Append("</td><td style=\"padding:6px 12px;border:1px solid #ddd;vertical-align:top;\">");
+            rows.Append(HtmlEncode(value));
+            rows.Append("</td></tr>");
+        }
+
+        Row("Tag number", tagNumber);
+        Row("Your name", FormatSubmitterName(rawRequest.Name));
+        Row("Email", rawRequest.Email);
+        Row("Phone", rawRequest.Phone?.Full);
+        Row("Date and time seen", FormatSeenTimeLine(rawRequest.Date));
+        AppendSubmissionAddressRow(rows, rawRequest.Address);
+        Row("Butterfly condition", rawRequest.Condition);
+        Row("Dead or alive", rawRequest.DeadOrAlive);
+        Row("How sunny", rawRequest.HowSunny);
+        Row("How windy", rawRequest.HowWindy);
+        Row("Nearby butterflies", rawRequest.NearbyButterflies);
+        Row("Nearby plants", rawRequest.NearbyPlants);
+
         return $@"
             <html>
-            <body style=""font-family: Arial, sans-serif; line-height: 1.6;"">
-                <p>Thank you for being part of our <b>MBNZT tagging programme</b>! Here's some exciting news:</p>
-                
-                <p>
-                    Tagged Butterfly <span style=""color: blue; font-weight: bold;"">{tagNumber}</span> was tagged
-                </p>
-                
-                <p>
-                    The butterfly was then seen at:
-                </p>
-                <pre style=""color: red; margin-left: 20px;"">{seenOfTimeAddress}</pre>
-                
-                <p>on <span style=""margin-left: 20px; font-weight: bold; color: red;"">{seenOfTime}</span></p>
-                
-                <p>We are raising awareness about our monarch butterflies in NZ and conservation issues for both the monarch and other Lepidoptera species. What we learn will be shared with anyone, especially the scientific community, to help with conservation and addressing climate change.</p>
-                
+            <body style=""font-family: Arial, sans-serif; line-height: 1.6; color: #222;"">
+                <p>Thank you for being part of our <b>MBNZT tagging programme</b>! Here is a copy of the sighting details you just submitted.</p>
+
+                <h2 style=""font-size: 1.1em; margin-top: 20px;"">Your submission</h2>
+                <table style=""border-collapse: collapse; max-width: 640px;"">{rows}</table>
+
+                <p style=""margin-top: 20px;"">We are raising awareness about our monarch butterflies in NZ and conservation issues for both the monarch and other Lepidoptera species. What we learn will be shared with anyone, especially the scientific community, to help with conservation and addressing climate change.</p>
+
                 <p>We would love your further involvement. Check out <a href=""http://www.nzbutterflies.org.nz"" style=""color: blue;"">www.nzbutterflies.org.nz</a> for more information about our work.</p>
-                
+
                 <p>This is a very exciting project and we thank you for your part in it.</p>
-                
+
                 <p style=""font-size: 10px; color: gray;"">UniqueID: {timestamp}</p>
             </body>
             </html>
         ";
+    }
+
+    private static void AppendSubmissionAddressRow(StringBuilder rows, string? address)
+    {
+        if (string.IsNullOrWhiteSpace(address))
+        {
+            return;
+        }
+
+        rows.Append(
+            "<tr><td style=\"padding:6px 12px;border:1px solid #ddd;font-weight:600;vertical-align:top;background:#f9f9f9;\">");
+        rows.Append(HtmlEncode("Location / map or address"));
+        rows.Append("</td><td style=\"padding:6px 12px;border:1px solid #ddd;vertical-align:top;\">");
+        var lines = address.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+        rows.Append(string.Join("<br/>", lines.Select(HtmlEncode)));
+        rows.Append("</td></tr>");
+    }
+
+    private static string HtmlEncode(string? s) => WebUtility.HtmlEncode(s ?? string.Empty);
+
+    private static string? FormatSeenTimeLine(JotFormDateDto? date)
+    {
+        if (date == null)
+        {
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(date.Day) && string.IsNullOrWhiteSpace(date.Month) &&
+            string.IsNullOrWhiteSpace(date.Year))
+        {
+            return null;
+        }
+
+        var timePart = string.IsNullOrWhiteSpace(date.TimeInput)
+            ? string.Empty
+            : $"{date.TimeInput} {date.AmPm}".Trim();
+
+        return $"{date.Day}-{date.Month}-{date.Year} {timePart}".Trim();
+    }
+
+    private static string? FormatSubmitterName(JotFormNameDto? name)
+    {
+        if (name == null)
+        {
+            return null;
+        }
+
+        var parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(name.First))
+        {
+            parts.Add(name.First.Trim());
+        }
+
+        if (!string.IsNullOrWhiteSpace(name.Last))
+        {
+            parts.Add(name.Last.Trim());
+        }
+
+        return parts.Count == 0 ? null : string.Join(" ", parts);
+    }
+
+    private string? GetGmailReplyToOrNull()
+    {
+        var v = _jotformSettings.GmailReplyTo;
+        return string.IsNullOrWhiteSpace(v) ? null : v.Trim();
     }
 
     /// <summary>
@@ -303,7 +389,7 @@ public class WebhookProcessingService : IWebhookProcessingService
             </html>
         ";
 
-        await _gmailService.SendEmailAsync(to, subject, emailContent, cancellationToken);
+        await _gmailService.SendEmailAsync(to, subject, emailContent, replyTo: null, cancellationToken);
     }
 
     /// <summary>

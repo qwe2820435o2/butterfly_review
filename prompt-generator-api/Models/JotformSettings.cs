@@ -34,4 +34,9 @@ public class JotformSettings
     /// Gmail OAuth refresh token
     /// </summary>
     public string GmailRefreshToken { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Optional Reply-To for outbound mail (e.g. admin mailbox for public sighting emails).
+    /// </summary>
+    public string GmailReplyTo { get; set; } = string.Empty;
 }
