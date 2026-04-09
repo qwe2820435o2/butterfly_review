@@ -78,8 +78,7 @@ public class WebhookProcessingService : IWebhookProcessingService
             if (!string.IsNullOrWhiteSpace(rawRequest.Email))
             {
                 var emails = new List<string>();
-                //emails.Add(rawRequest.Email);
-                emails.Add("hi.travis.nong@gmail.com");
+                emails.Add(rawRequest.Email);
 
                 var content = BuildEmailContent02(rawRequest, tagNumber, timestamp);
 
