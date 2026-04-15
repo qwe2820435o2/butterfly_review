@@ -41,8 +41,8 @@ public class ReleaseConfirmationEmailService : IReleaseConfirmationEmailService
             return;
         }
 
-        //var to = submission.Email.Trim();
-        var to = "hi.travis.nong@gmail.com";
+        var to = submission.Email.Trim();
+        //var to = "hi.travis.nong@gmail.com";
         
         var tagNumber = submission.TagNumber ?? string.Empty;
         var tagDate = submission.ReleaseDatePretty ?? "Unknown";
