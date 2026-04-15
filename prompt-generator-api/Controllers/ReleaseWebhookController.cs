@@ -9,6 +9,7 @@ using tennis_wave_api.Helpers;
 using tennis_wave_api.Models;
 using tennis_wave_api.Models.DTOs;
 using tennis_wave_api.Models.Entities;
+using tennis_wave_api.Services.Interfaces;
 
 namespace tennis_wave_api.Controllers;
 
@@ -22,15 +23,18 @@ public class ReleaseWebhookController : ControllerBase
 {
     private readonly ILogger<ReleaseWebhookController> _logger;
     private readonly IReleaseSubmissionRepository _releaseSubmissionRepository;
+    private readonly IReleaseConfirmationEmailService _releaseConfirmationEmailService;
     private readonly JotformSettings _jotformSettings;
 
     public ReleaseWebhookController(
         ILogger<ReleaseWebhookController> logger,
         IReleaseSubmissionRepository releaseSubmissionRepository,
+        IReleaseConfirmationEmailService releaseConfirmationEmailService,
         IOptions<JotformSettings> jotformSettings)
     {
         _logger = logger;
         _releaseSubmissionRepository = releaseSubmissionRepository;
+        _releaseConfirmationEmailService = releaseConfirmationEmailService;
         _jotformSettings = jotformSettings.Value;
     }
 
@@ -152,6 +156,11 @@ public class ReleaseWebhookController : ControllerBase
 
             // Save to MongoDB (insert only if tag number doesn't exist, otherwise keep existing data)
             await _releaseSubmissionRepository.UpsertByTagNumberAsync(releaseSubmission);
+
+            await _releaseConfirmationEmailService.SendReleaseConfirmationIfEmailPresentAsync(
+                releaseSubmission,
+                timestamp,
+                CancellationToken.None);
 
             _logger.LogInformation("处理 Release submission, TagNumber: {TagNumber}, Timestamp: {Timestamp}", 
                 releaseSubmission.TagNumber,
