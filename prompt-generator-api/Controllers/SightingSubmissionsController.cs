@@ -60,6 +60,10 @@ public class SightingSubmissionsController : ControllerBase
                 submissions = await _repository.GetByTagNumberAsync(tagNumber!);
             }
 
+            submissions = submissions
+                .Where(s => !string.Equals(s.Status?.Trim(), "DELETED", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
             // Remove answers field if not requested
             if (!includeAnswers)
             {

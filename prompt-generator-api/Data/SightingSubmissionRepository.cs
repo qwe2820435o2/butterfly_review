@@ -174,7 +174,10 @@ public class SightingSubmissionRepository : ISightingSubmissionRepository
 
     public async Task<IReadOnlyList<SightingSubmission>> GetByEmailAsync(string email)
     {
-        var filter = Builders<SightingSubmission>.Filter.Eq(x => x.Email, email);
+        var filter = Builders<SightingSubmission>.Filter.And(
+            Builders<SightingSubmission>.Filter.Eq(x => x.Email, email),
+            Builders<SightingSubmission>.Filter.Ne(x => x.Status, "DELETED")
+        );
         var list = await _collection
             .Find(filter)
             .SortByDescending(x => x.CreatedAtUtc)
@@ -185,7 +188,10 @@ public class SightingSubmissionRepository : ISightingSubmissionRepository
 
     public async Task<IReadOnlyList<SightingSubmission>> GetByTagNumberAsync(string tagNumber)
     {
-        var filter = Builders<SightingSubmission>.Filter.Eq(x => x.TagNumber, tagNumber);
+        var filter = Builders<SightingSubmission>.Filter.And(
+            Builders<SightingSubmission>.Filter.Eq(x => x.TagNumber, tagNumber),
+            Builders<SightingSubmission>.Filter.Ne(x => x.Status, "DELETED")
+        );
         var list = await _collection
             .Find(filter)
             .SortByDescending(x => x.CreatedAtUtc)
