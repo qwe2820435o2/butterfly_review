@@ -338,7 +338,7 @@ This project is licensed under the MIT License.
 
 ## 👨‍💻 Author
 
-**JinLin Nong**
+**Travis Nong**
 - GitHub: [qwe2820435o2](https://github.com/qwe2820435o2)
 - LinkedIn: [Travis Nong](https://linkedin.com/in/travis-nong)
 
