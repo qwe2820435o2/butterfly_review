@@ -237,4 +237,64 @@ public class SightingSubmissionRepository : ISightingSubmissionRepository
     {
         await _collection.DeleteOneAsync(x => x.Id == id);
     }
+
+    public async Task<(List<SightingSubmission> Items, int TotalCount)> GetPaginatedAsync(
+        int page, int pageSize, bool sortDescending = true, string? search = null)
+    {
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 20;
+
+        var filter = NotDeletedFilter();
+
+        // Optional search: match email, tag number or phone (case-insensitive, contains).
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var regex = new BsonRegularExpression(
+                System.Text.RegularExpressions.Regex.Escape(search.Trim()), "i");
+            var searchFilter = Builders<SightingSubmission>.Filter.Or(
+                Builders<SightingSubmission>.Filter.Regex(x => x.Email, regex),
+                Builders<SightingSubmission>.Filter.Regex(x => x.TagNumber, regex),
+                Builders<SightingSubmission>.Filter.Regex(x => x.Phone, regex));
+            filter = Builders<SightingSubmission>.Filter.And(filter, searchFilter);
+        }
+
+        var totalCount = (int)await _collection.CountDocumentsAsync(filter);
+
+        var query = _collection.Find(filter);
+        query = sortDescending
+            ? query.SortByDescending(x => x.CreatedAtUtc)
+            : query.SortBy(x => x.CreatedAtUtc);
+
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Limit(pageSize)
+            .ToListAsync();
+
+        return (items, totalCount);
+    }
+
+    public async Task<bool> SoftDeleteByIdAsync(string id)
+    {
+        var update = Builders<SightingSubmission>.Update.Set(x => x.Status, "DELETED");
+        var result = await _collection.UpdateOneAsync(x => x.Id == id, update);
+        return result.ModifiedCount > 0;
+    }
+
+    public async Task UpdateAsync(SightingSubmission entity)
+    {
+        var result = await _collection.ReplaceOneAsync(
+            x => x.Id == entity.Id, entity, new ReplaceOptions { IsUpsert = false });
+        if (result.MatchedCount == 0)
+        {
+            throw new KeyNotFoundException($"Sighting submission with ID {entity.Id} not found");
+        }
+    }
+
+    private static readonly BsonRegularExpression DeletedStatusRegex = new(@"^\s*deleted\s*$", "i");
+
+    private static FilterDefinition<SightingSubmission> NotDeletedFilter()
+    {
+        return Builders<SightingSubmission>.Filter.Not(
+            Builders<SightingSubmission>.Filter.Regex(x => x.Status, DeletedStatusRegex));
+    }
 }

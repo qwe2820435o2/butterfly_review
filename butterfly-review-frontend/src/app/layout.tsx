@@ -3,7 +3,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import {Toaster} from "sonner";
-import Header from "@/components/layout/Header";
 import {Provider} from "react-redux";
 import {store} from "@/store";
 import GlobalLoading from "@/components/common/GlobalLoading";
@@ -37,8 +36,7 @@ export default function RootLayout({
           >
             <Provider store={store}>
                 <GlobalLoading />
-                <Header />
-                <main>{children}</main>
+                {children}
                 <Toaster
                     position="top-center"
                     richColors

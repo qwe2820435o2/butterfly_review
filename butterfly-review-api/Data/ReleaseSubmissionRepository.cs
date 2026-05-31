@@ -280,4 +280,55 @@ public class ReleaseSubmissionRepository : IReleaseSubmissionRepository
         }
         await _collection.InsertOneAsync(entity);
     }
+
+    public async Task<(List<ReleaseSubmission> Items, int TotalCount)> GetPaginatedAsync(
+        int page, int pageSize, bool sortDescending = true, string? search = null)
+    {
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 20;
+
+        var filter = ReleaseSubmissionSoftDeleteHelper.NotSoftDeletedFilter();
+
+        // Optional search: match email or tag number (case-insensitive, contains).
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var regex = new BsonRegularExpression(
+                System.Text.RegularExpressions.Regex.Escape(search.Trim()), "i");
+            var searchFilter = Builders<ReleaseSubmission>.Filter.Or(
+                Builders<ReleaseSubmission>.Filter.Regex(x => x.Email, regex),
+                Builders<ReleaseSubmission>.Filter.Regex(x => x.TagNumber, regex));
+            filter = Builders<ReleaseSubmission>.Filter.And(filter, searchFilter);
+        }
+
+        var totalCount = (int)await _collection.CountDocumentsAsync(filter);
+
+        var query = _collection.Find(filter);
+        query = sortDescending
+            ? query.SortByDescending(x => x.CreatedAtUtc)
+            : query.SortBy(x => x.CreatedAtUtc);
+
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Limit(pageSize)
+            .ToListAsync();
+
+        return (items, totalCount);
+    }
+
+    public async Task<bool> SoftDeleteByIdAsync(string id)
+    {
+        var update = Builders<ReleaseSubmission>.Update.Set(x => x.Status, "DELETED");
+        var result = await _collection.UpdateOneAsync(x => x.Id == id, update);
+        return result.ModifiedCount > 0;
+    }
+
+    public async Task UpdateAsync(ReleaseSubmission entity)
+    {
+        var result = await _collection.ReplaceOneAsync(
+            x => x.Id == entity.Id, entity, new ReplaceOptions { IsUpsert = false });
+        if (result.MatchedCount == 0)
+        {
+            throw new KeyNotFoundException($"Release submission with ID {entity.Id} not found");
+        }
+    }
 }

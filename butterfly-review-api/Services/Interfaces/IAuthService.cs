@@ -13,6 +13,11 @@ public interface IAuthService
     Task<AuthResponseDto> RegisterAsync(RegisterDto registerDto);
 
     /// <summary>
+    /// Manually registers a user with an explicit role (admin tooling).
+    /// </summary>
+    Task<AuthResponseDto> RegisterWithRoleAsync(AdminRegisterDto registerDto);
+
+    /// <summary>
     /// Authenticates a user and returns a token upon successful login.
     /// </summary>
     Task<AuthResponseDto> LoginAsync(LoginDto loginDto);

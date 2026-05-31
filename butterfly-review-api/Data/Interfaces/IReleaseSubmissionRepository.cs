@@ -33,4 +33,20 @@ public interface IReleaseSubmissionRepository
     Task DeleteByIdAsync(string id);
 
     Task InsertAsync(ReleaseSubmission entity);
+
+    /// <summary>
+    /// Admin: paginated list of non-soft-deleted submissions, ordered by creation time.
+    /// </summary>
+    Task<(List<ReleaseSubmission> Items, int TotalCount)> GetPaginatedAsync(
+        int page, int pageSize, bool sortDescending = true, string? search = null);
+
+    /// <summary>
+    /// Admin: soft-delete a submission by setting its status to "deleted".
+    /// </summary>
+    Task<bool> SoftDeleteByIdAsync(string id);
+
+    /// <summary>
+    /// Admin: replace an existing submission by id. Throws if it does not exist.
+    /// </summary>
+    Task UpdateAsync(ReleaseSubmission entity);
 }

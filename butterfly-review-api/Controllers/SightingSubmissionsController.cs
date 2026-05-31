@@ -1,8 +1,11 @@
 using System.Linq;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using tennis_wave_api.Data.Interfaces;
 using tennis_wave_api.Helpers;
 using tennis_wave_api.Models;
+using tennis_wave_api.Models.DTOs;
+using tennis_wave_api.Models.Entities;
 
 namespace tennis_wave_api.Controllers;
 
@@ -79,6 +82,150 @@ public class SightingSubmissionsController : ControllerBase
         {
             return BadRequest(ApiResponseHelper.Fail<object>(ex.Message));
         }
+    }
+
+    /// <summary>
+    /// Admin: paginated list of all sighting submissions.
+    /// </summary>
+    [HttpGet("paginated")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetPaginated(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] bool sortDescending = true,
+        [FromQuery] bool includeAnswers = false,
+        [FromQuery] string? search = null)
+    {
+        try
+        {
+            var (items, totalCount) = await _repository.GetPaginatedAsync(page, pageSize, sortDescending, search);
+
+            if (!includeAnswers)
+            {
+                foreach (var item in items)
+                {
+                    item.Answers = new Dictionary<string, JotformAnswerRawDto>();
+                }
+            }
+
+            var totalPages = pageSize > 0 ? (int)Math.Ceiling(totalCount / (double)pageSize) : 0;
+            var result = new PaginatedResultDto<SightingSubmission>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                Page = page,
+                PageSize = pageSize,
+                TotalPages = totalPages,
+                HasNextPage = page < totalPages,
+                HasPreviousPage = page > 1
+            };
+
+            return Ok(ApiResponseHelper.Success(result));
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ApiResponseHelper.Fail<object>(ex.Message));
+        }
+    }
+
+    /// <summary>
+    /// Admin: soft-delete a sighting submission.
+    /// </summary>
+    [HttpDelete("{id}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Delete(string id)
+    {
+        var deleted = await _repository.SoftDeleteByIdAsync(id);
+        if (!deleted)
+        {
+            return NotFound(ApiResponseHelper.Fail<object>("Submission not found"));
+        }
+        return Ok(ApiResponseHelper.Success<object>(null, "Submission deleted"));
+    }
+
+    /// <summary>
+    /// Admin: get a single sighting submission by id.
+    /// </summary>
+    [HttpGet("{id}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetById(string id)
+    {
+        var item = await _repository.GetByIdAsync(id);
+        if (item == null)
+        {
+            return NotFound(ApiResponseHelper.Fail<object>("Submission not found"));
+        }
+        return Ok(ApiResponseHelper.Success(item));
+    }
+
+    /// <summary>
+    /// Admin: create a new sighting submission.
+    /// </summary>
+    [HttpPost]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Create([FromBody] SightingSubmissionInputDto dto)
+    {
+        var now = DateTime.UtcNow;
+        var entity = new SightingSubmission
+        {
+            SubmissionId = $"admin-{Guid.NewGuid():N}",
+            FormId = "admin",
+            Status = string.Empty,
+            CreatedAtUtc = now,
+            InsertedAtUtc = now,
+            TagNumber = dto.TagNumber,
+            Email = dto.Email,
+            Name = dto.Name,
+            Phone = dto.Phone,
+            SightingDateTimeUtc = dto.SightingDateTimeUtc,
+            SightingDatePretty = dto.SightingDateTimeUtc?.ToString("yyyy-MM-dd HH:mm"),
+            Condition = dto.Condition,
+            DeadOrAlive = dto.DeadOrAlive,
+            NearbyButterflies = dto.NearbyButterflies,
+            NearbyPlants = dto.NearbyPlants,
+            Latitude = dto.Latitude,
+            Longitude = dto.Longitude,
+            Address = dto.Address,
+            HowSunny = dto.HowSunny,
+            HowWindy = dto.HowWindy
+        };
+
+        await _repository.InsertAsync(entity);
+        return Ok(ApiResponseHelper.Success(entity, "Submission created"));
+    }
+
+    /// <summary>
+    /// Admin: update an existing sighting submission.
+    /// </summary>
+    [HttpPut("{id}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Update(string id, [FromBody] SightingSubmissionInputDto dto)
+    {
+        var existing = await _repository.GetByIdAsync(id);
+        if (existing == null)
+        {
+            return NotFound(ApiResponseHelper.Fail<object>("Submission not found"));
+        }
+
+        existing.TagNumber = dto.TagNumber;
+        existing.Email = dto.Email;
+        existing.Name = dto.Name;
+        existing.Phone = dto.Phone;
+        existing.SightingDateTimeUtc = dto.SightingDateTimeUtc;
+        existing.SightingDatePretty = dto.SightingDateTimeUtc?.ToString("yyyy-MM-dd HH:mm");
+        existing.Condition = dto.Condition;
+        existing.DeadOrAlive = dto.DeadOrAlive;
+        existing.NearbyButterflies = dto.NearbyButterflies;
+        existing.NearbyPlants = dto.NearbyPlants;
+        existing.Latitude = dto.Latitude;
+        existing.Longitude = dto.Longitude;
+        existing.Address = dto.Address;
+        existing.HowSunny = dto.HowSunny;
+        existing.HowWindy = dto.HowWindy;
+        existing.UpdatedAtUtc = DateTime.UtcNow;
+
+        await _repository.UpdateAsync(existing);
+        return Ok(ApiResponseHelper.Success(existing, "Submission updated"));
     }
 }
 

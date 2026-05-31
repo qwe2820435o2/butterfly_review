@@ -13,4 +13,10 @@ public class LoginDto
 
     [Required]
     public string Password { get; set; } = string.Empty;
+
+    [Required]
+    public string CaptchaId { get; set; } = string.Empty;
+
+    [Required]
+    public string CaptchaCode { get; set; } = string.Empty;
 }

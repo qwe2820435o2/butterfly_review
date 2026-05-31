@@ -1,8 +1,11 @@
 using System.Linq;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using tennis_wave_api.Data.Interfaces;
 using tennis_wave_api.Helpers;
 using tennis_wave_api.Models;
+using tennis_wave_api.Models.DTOs;
+using tennis_wave_api.Models.Entities;
 
 namespace tennis_wave_api.Controllers;
 
@@ -80,6 +83,141 @@ public class ReleaseSubmissionsController : ControllerBase
             return BadRequest(ApiResponseHelper.Fail<object>(ex.Message));
         }
     }
-    
+
+    /// <summary>
+    /// Admin: paginated list of all release submissions.
+    /// </summary>
+    [HttpGet("paginated")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetPaginated(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] bool sortDescending = true,
+        [FromQuery] bool includeAnswers = false,
+        [FromQuery] string? search = null)
+    {
+        try
+        {
+            var (items, totalCount) = await _repository.GetPaginatedAsync(page, pageSize, sortDescending, search);
+
+            if (!includeAnswers)
+            {
+                foreach (var item in items)
+                {
+                    item.Answers = new Dictionary<string, JotformAnswerRawDto>();
+                }
+            }
+
+            var totalPages = pageSize > 0 ? (int)Math.Ceiling(totalCount / (double)pageSize) : 0;
+            var result = new PaginatedResultDto<ReleaseSubmission>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                Page = page,
+                PageSize = pageSize,
+                TotalPages = totalPages,
+                HasNextPage = page < totalPages,
+                HasPreviousPage = page > 1
+            };
+
+            return Ok(ApiResponseHelper.Success(result));
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ApiResponseHelper.Fail<object>(ex.Message));
+        }
+    }
+
+    /// <summary>
+    /// Admin: soft-delete a release submission.
+    /// </summary>
+    [HttpDelete("{id}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Delete(string id)
+    {
+        var deleted = await _repository.SoftDeleteByIdAsync(id);
+        if (!deleted)
+        {
+            return NotFound(ApiResponseHelper.Fail<object>("Submission not found"));
+        }
+        return Ok(ApiResponseHelper.Success<object>(null, "Submission deleted"));
+    }
+
+    /// <summary>
+    /// Admin: get a single release submission by id.
+    /// </summary>
+    [HttpGet("{id}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetById(string id)
+    {
+        var item = await _repository.GetByIdAsync(id);
+        if (item == null)
+        {
+            return NotFound(ApiResponseHelper.Fail<object>("Submission not found"));
+        }
+        return Ok(ApiResponseHelper.Success(item));
+    }
+
+    /// <summary>
+    /// Admin: create a new release submission.
+    /// </summary>
+    [HttpPost]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Create([FromBody] ReleaseSubmissionInputDto dto)
+    {
+        var now = DateTime.UtcNow;
+        var entity = new ReleaseSubmission
+        {
+            SubmissionId = $"admin-{Guid.NewGuid():N}",
+            FormId = "admin",
+            Status = string.Empty,
+            CreatedAtUtc = now,
+            InsertedAtUtc = now,
+            TagNumber = dto.TagNumber,
+            Email = dto.Email,
+            ReleaseDateTimeUtc = dto.ReleaseDateTimeUtc,
+            ReleaseDatePretty = dto.ReleaseDateTimeUtc?.ToString("yyyy-MM-dd HH:mm"),
+            Notes = dto.Notes,
+            Wind = dto.Wind,
+            Sex = dto.Sex,
+            Sun = dto.Sun,
+            Latitude = dto.Latitude,
+            Longitude = dto.Longitude,
+            Address = dto.Address
+        };
+
+        await _repository.InsertAsync(entity);
+        return Ok(ApiResponseHelper.Success(entity, "Submission created"));
+    }
+
+    /// <summary>
+    /// Admin: update an existing release submission.
+    /// </summary>
+    [HttpPut("{id}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Update(string id, [FromBody] ReleaseSubmissionInputDto dto)
+    {
+        var existing = await _repository.GetByIdAsync(id);
+        if (existing == null)
+        {
+            return NotFound(ApiResponseHelper.Fail<object>("Submission not found"));
+        }
+
+        existing.TagNumber = dto.TagNumber;
+        existing.Email = dto.Email;
+        existing.ReleaseDateTimeUtc = dto.ReleaseDateTimeUtc;
+        existing.ReleaseDatePretty = dto.ReleaseDateTimeUtc?.ToString("yyyy-MM-dd HH:mm");
+        existing.Notes = dto.Notes;
+        existing.Wind = dto.Wind;
+        existing.Sex = dto.Sex;
+        existing.Sun = dto.Sun;
+        existing.Latitude = dto.Latitude;
+        existing.Longitude = dto.Longitude;
+        existing.Address = dto.Address;
+        existing.UpdatedAtUtc = DateTime.UtcNow;
+
+        await _repository.UpdateAsync(existing);
+        return Ok(ApiResponseHelper.Success(existing, "Submission updated"));
+    }
 }
 

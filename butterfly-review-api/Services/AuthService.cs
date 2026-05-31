@@ -20,12 +20,14 @@ public class AuthService : IAuthService
 {
     private readonly IUserRepository _userRepository;
     private readonly JwtSettings _jwtSettings;
+    private readonly AdminSettings _adminSettings;
     private readonly IMapper _mapper;
 
-    public AuthService(IUserRepository userRepository, IOptions<JwtSettings> jwtSettings, IMapper mapper)
+    public AuthService(IUserRepository userRepository, IOptions<JwtSettings> jwtSettings, IOptions<AdminSettings> adminSettings, IMapper mapper)
     {
         _userRepository = userRepository;
         _jwtSettings = jwtSettings.Value;
+        _adminSettings = adminSettings.Value;
         _mapper = mapper;
     }
 
@@ -40,7 +42,8 @@ public class AuthService : IAuthService
         var user = new User
         {
             UserName = registerDto.UserName,
-            Email = registerDto.Email,
+            // Store email normalized (lowercase) to stay consistent with GetByEmailAsync lookups.
+            Email = registerDto.Email.Trim().ToLowerInvariant(),
             // Hash the password securely using BCrypt before storing it.
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(registerDto.Password),
             CreatedAt = DateTime.UtcNow,
@@ -59,6 +62,39 @@ public class AuthService : IAuthService
         return response;
     }
 
+    public async Task<AuthResponseDto> RegisterWithRoleAsync(AdminRegisterDto registerDto)
+    {
+        // Ensure the email isn't already in use.
+        if (await _userRepository.GetByEmailAsync(registerDto.Email) != null)
+        {
+            throw new BusinessException("Email is already taken.", "EMAIL_EXISTS");
+        }
+
+        // Normalize the requested role; anything other than "Admin" falls back to "User".
+        var role = string.Equals(registerDto.Role?.Trim(), "Admin", StringComparison.OrdinalIgnoreCase)
+            ? "Admin"
+            : "User";
+
+        var user = new User
+        {
+            UserName = registerDto.UserName,
+            // Store email normalized (lowercase) to stay consistent with GetByEmailAsync lookups.
+            Email = registerDto.Email.Trim().ToLowerInvariant(),
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(registerDto.Password),
+            CreatedAt = DateTime.UtcNow,
+            IsActive = true,
+            Role = role,
+            Avatar = registerDto.Avatar ?? "avatar1.png"
+        };
+
+        var createdUser = await _userRepository.CreateUserAsync(user);
+
+        var response = _mapper.Map<AuthResponseDto>(createdUser);
+        response.Token = GenerateJwtToken(createdUser);
+
+        return response;
+    }
+
     public async Task<AuthResponseDto> LoginAsync(LoginDto loginDto)
     {
         var user = await _userRepository.GetByEmailAsync(loginDto.Email);
@@ -68,6 +104,15 @@ public class AuthService : IAuthService
         {
             // Use a generic error message to prevent account enumeration attacks.
             throw new BusinessException("Invalid credentials.", "INVALID_CREDENTIALS");
+        }
+
+        // Bootstrap admins: promote (and persist) any user whose email is in the configured allowlist.
+        if (_adminSettings.AdminEmails.Any(e => string.Equals(e, user.Email, StringComparison.OrdinalIgnoreCase))
+            && !string.Equals(user.Role, "Admin", StringComparison.OrdinalIgnoreCase))
+        {
+            user.Role = "Admin";
+            user.UpdatedAt = DateTime.UtcNow;
+            await _userRepository.UpdateUserAsync(user);
         }
 
         var response = _mapper.Map<AuthResponseDto>(user);
@@ -92,7 +137,8 @@ public class AuthService : IAuthService
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
             new Claim(JwtRegisteredClaimNames.Name, user.UserName),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()) 
+            new Claim(ClaimTypes.Role, string.IsNullOrWhiteSpace(user.Role) ? "User" : user.Role),
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
         var tokenDescriptor = new SecurityTokenDescriptor

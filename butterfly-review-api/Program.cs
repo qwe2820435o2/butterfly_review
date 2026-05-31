@@ -40,6 +40,9 @@ if (jwtSettings == null)
 }
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 
+// Admin bootstrap allowlist
+builder.Services.Configure<AdminSettings>(builder.Configuration.GetSection(AdminSettings.SectionName));
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -167,6 +170,9 @@ else
     
     Log.Warning("MongoDB services registered with placeholder connection. Configure connection string to enable MongoDB operations.");
 }
+
+// In-memory cache (used by the captcha service)
+builder.Services.AddMemoryCache();
 
 // Add Controllers
 builder.Services.AddControllers();
