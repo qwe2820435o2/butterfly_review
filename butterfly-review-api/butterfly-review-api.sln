@@ -1,7 +1,7 @@
 
 Microsoft Visual Studio Solution File, Format Version 12.00
-# 
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "prompt-generator-api", "prompt-generator-api.csproj", "{C490A4A6-C5FE-44F7-B9B2-F047FF0593F8}"
+#
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "butterfly-review-api", "butterfly-review-api.csproj", "{C490A4A6-C5FE-44F7-B9B2-F047FF0593F8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

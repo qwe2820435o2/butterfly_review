@@ -33,7 +33,7 @@ if (jwtSettings == null)
     jwtSettings = new JwtSettings
     {
         SecretKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY") ?? "your-super-secret-key-here-make-it-long-and-random-at-least-32-characters",
-        Issuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? "prompt-generator-api",
+        Issuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? "butterfly-review-api",
         Audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? "tennis-wave-users",
         ExpiryInMinutes = 60
     };

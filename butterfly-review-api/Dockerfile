@@ -3,7 +3,7 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /app
 
 # Copy solution and all project files
-COPY prompt-generator-api.sln ./
+COPY butterfly-review-api.sln ./
 COPY . ./
 
 # Restore as distinct layers
@@ -19,4 +19,4 @@ WORKDIR /app
 COPY --from=build /app/out ./
 ENV ASPNETCORE_URLS=http://+:80
 EXPOSE 80
-ENTRYPOINT ["dotnet", "prompt-generator-api.dll"]
+ENTRYPOINT ["dotnet", "butterfly-review-api.dll"]
