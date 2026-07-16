@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using tennis_wave_api.Data.Interfaces;
 using tennis_wave_api.Helpers;
@@ -8,9 +7,17 @@ using tennis_wave_api.Models.Entities;
 namespace tennis_wave_api.Controllers;
 
 /// <summary>
-/// One-time maintenance endpoint: re-derives Latitude/Longitude for existing submissions using
-/// the corrected gpsLocationRaw-first / mapLocatorRaw-fallback priority, and reports the records
-/// still pinned at the map widget's default position that only a human can recover.
+/// TEMPORARY — DELETE THIS FILE ONCE THE BACKFILL HAS RUN.
+///
+/// These endpoints are deliberately unauthenticated so the one-time backfill can be triggered
+/// without the login/captcha flow. While deployed, anyone who knows the URL can read every
+/// submitter's email and address, and can trigger a mass write against the production database.
+/// That is an accepted, time-boxed trade-off: deploy, run /preview then /apply, then delete this
+/// controller and redeploy.
+///
+/// What it does: re-derives Latitude/Longitude for existing submissions using the corrected
+/// gpsLocationRaw-first / mapLocatorRaw-fallback priority, and reports the records still pinned
+/// at the map widget's default position that only a human can recover.
 ///
 /// Call /preview first: check TopStoredCoordinateClusters to confirm the sentinel is the right
 /// one, review the Updated list, then call /apply with the same sentinel.
@@ -18,7 +25,6 @@ namespace tennis_wave_api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/coordinate-backfill")]
-[Authorize(Roles = "Admin")]
 public class CoordinateBackfillController : ControllerBase
 {
     /// <summary>
