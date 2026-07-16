@@ -30,6 +30,12 @@ public interface IReleaseSubmissionRepository
 
     Task<IReadOnlyList<ReleaseSubmission>> GetAllWithCoordinatesAsync();
 
+    /// <summary>
+    /// Admin: all non-soft-deleted submissions, full documents, no field projection.
+    /// Intended for one-time maintenance scripts (e.g. coordinate backfill); not for hot paths.
+    /// </summary>
+    Task<IReadOnlyList<ReleaseSubmission>> GetAllAsync();
+
     Task DeleteByIdAsync(string id);
 
     Task InsertAsync(ReleaseSubmission entity);

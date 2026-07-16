@@ -233,6 +233,18 @@ public class SightingSubmissionRepository : ISightingSubmissionRepository
         return list;
     }
 
+    public async Task<IReadOnlyList<SightingSubmission>> GetAllAsync()
+    {
+        var filter = Builders<SightingSubmission>.Filter.Ne(x => x.Status, "DELETED");
+
+        var list = await _collection
+            .Find(filter)
+            .SortBy(x => x.TagNumber)
+            .ToListAsync();
+
+        return list;
+    }
+
     public async Task DeleteByIdAsync(string id)
     {
         await _collection.DeleteOneAsync(x => x.Id == id);

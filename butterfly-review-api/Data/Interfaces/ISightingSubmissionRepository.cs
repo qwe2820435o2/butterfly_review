@@ -25,6 +25,12 @@ public interface ISightingSubmissionRepository
 
     Task<IReadOnlyList<SightingSubmission>> GetAllWithCoordinatesAsync();
 
+    /// <summary>
+    /// Admin: all non-soft-deleted submissions, full documents, no field projection.
+    /// Intended for one-time maintenance scripts (e.g. coordinate backfill); not for hot paths.
+    /// </summary>
+    Task<IReadOnlyList<SightingSubmission>> GetAllAsync();
+
     Task DeleteByIdAsync(string id);
 
     /// <summary>

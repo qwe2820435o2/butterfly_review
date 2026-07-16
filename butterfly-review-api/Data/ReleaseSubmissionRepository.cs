@@ -267,6 +267,18 @@ public class ReleaseSubmissionRepository : IReleaseSubmissionRepository
         return list;
     }
 
+    public async Task<IReadOnlyList<ReleaseSubmission>> GetAllAsync()
+    {
+        var filter = ReleaseSubmissionSoftDeleteHelper.NotSoftDeletedFilter();
+
+        var list = await _collection
+            .Find(filter)
+            .SortBy(x => x.TagNumber)
+            .ToListAsync();
+
+        return list;
+    }
+
     public async Task DeleteByIdAsync(string id)
     {
         await _collection.DeleteOneAsync(x => x.Id == id);

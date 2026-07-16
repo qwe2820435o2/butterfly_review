@@ -63,14 +63,16 @@ public class JotformMappingHelper
         entity.GpsLocationRaw = gpsText;
 
         // Parse coordinates from either widget text
-        if (TryParseCoordinates(mapText, out var lat1, out var lng1))
+        // Prefer gpsText: the map locator widget submits a stuck default position
+        // when the user never manually moves the pin, so it can't be trusted first.
+        if (TryParseCoordinates(gpsText, out var lat1, out var lng1))
         {
             entity.Latitude = lat1;
             entity.Longitude = lng1;
         }
 
         if ((!entity.Latitude.HasValue || !entity.Longitude.HasValue) &&
-            TryParseCoordinates(gpsText, out var lat2, out var lng2))
+            TryParseCoordinates(mapText, out var lat2, out var lng2))
         {
             entity.Latitude = entity.Latitude ?? lat2;
             entity.Longitude = entity.Longitude ?? lng2;
@@ -152,14 +154,16 @@ public class JotformMappingHelper
         entity.MapLocatorRaw = mapText;
         entity.GpsLocationRaw = gpsText;
 
-        if (TryParseCoordinates(mapText, out var lat1, out var lng1))
+        // Prefer gpsText: the map locator widget submits a stuck default position
+        // when the user never manually moves the pin, so it can't be trusted first.
+        if (TryParseCoordinates(gpsText, out var lat1, out var lng1))
         {
             entity.Latitude = lat1;
             entity.Longitude = lng1;
         }
 
         if ((!entity.Latitude.HasValue || !entity.Longitude.HasValue) &&
-            TryParseCoordinates(gpsText, out var lat2, out var lng2))
+            TryParseCoordinates(mapText, out var lat2, out var lng2))
         {
             entity.Latitude = entity.Latitude ?? lat2;
             entity.Longitude = entity.Longitude ?? lng2;
@@ -247,7 +251,7 @@ public class JotformMappingHelper
         return false;
     }
 
-    private static bool TryParseCoordinates(string? text, out double? latitude, out double? longitude)
+    internal static bool TryParseCoordinates(string? text, out double? latitude, out double? longitude)
     {
         latitude = null;
         longitude = null;
