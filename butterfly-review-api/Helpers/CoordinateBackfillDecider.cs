@@ -5,7 +5,7 @@ public enum CoordinateBackfillAction
     /// <summary>Leave the record alone and don't report it.</summary>
     None,
 
-    /// <summary>Stored coordinates provably came from the old parse order; safe to re-derive.</summary>
+    /// <summary>Stored coordinates are pinned exactly at the sentinel; a real location is available.</summary>
     Update,
 
     /// <summary>
@@ -36,10 +36,12 @@ public record CoordinateBackfillDecision(
 /// under the old mapLocatorRaw-first order were stored at that default instead of the real
 /// location carried by gpsLocationRaw.
 ///
-/// Two invariants keep this safe to run against live data:
-///   1. Only records whose stored coordinates exactly match what the old parse order would have
-///      produced are updated. Anything else is assumed to be a manual correction and left alone.
-///   2. The sentinel value is never written back into a record.
+/// The ONLY proven signature of that bug is the stored coordinate being exactly the sentinel.
+/// Do not treat "gpsLocationRaw and mapLocatorRaw parse to slightly different values" as evidence
+/// of the bug on its own — two raw location fields on the same legitimate submission routinely
+/// disagree by a few meters (different capture method, rounding), and that is not a defect. A
+/// record whose stored coordinate is any real, non-sentinel value is left alone unconditionally,
+/// even if a fresher parse would produce a marginally different number.
 /// </summary>
 public static class CoordinateBackfillDecider
 {
@@ -51,7 +53,6 @@ public static class CoordinateBackfillDecider
         double sentinelLongitude)
     {
         var hasNew = TryResolve(input, preferGps: true, out var newLat, out var newLng);
-        var hasOld = TryResolve(input, preferGps: false, out var oldLat, out var oldLng);
 
         // Resolving to the sentinel is the same as resolving to nothing: it's not a real location.
         var newIsUsable = hasNew && !IsSentinel(newLat!.Value, newLng!.Value, sentinelLatitude, sentinelLongitude);
@@ -65,26 +66,19 @@ public static class CoordinateBackfillDecider
                 : None();
         }
 
-        var currentMatchesOldComputed = hasOld
-            && CoordsEqual(input.Latitude!.Value, oldLat!.Value)
-            && CoordsEqual(input.Longitude!.Value, oldLng!.Value);
+        var currentIsSentinel = IsSentinel(input.Latitude!.Value, input.Longitude!.Value, sentinelLatitude, sentinelLongitude);
 
-        var newDiffersFromOld = !hasOld
-            || !CoordsEqual(newLat!.Value, oldLat!.Value)
-            || !CoordsEqual(newLng!.Value, oldLng!.Value);
-
-        if (newIsUsable && currentMatchesOldComputed && newDiffersFromOld)
+        if (!currentIsSentinel)
         {
-            return Update(newLat, newLng, "matched-old-bug-pattern");
+            // Stored value is a real, specific location — not proof of the known bug. Leave it,
+            // even if gps/map disagree by a hair.
+            return None();
         }
 
-        if (IsSentinel(input.Latitude!.Value, input.Longitude!.Value, sentinelLatitude, sentinelLongitude))
-        {
-            return new CoordinateBackfillDecision(
+        return newIsUsable
+            ? Update(newLat, newLng, "matched-sentinel-bug-pattern")
+            : new CoordinateBackfillDecision(
                 CoordinateBackfillAction.StuckAtSentinel, null, null, "stuck-at-default-no-usable-source");
-        }
-
-        return None();
     }
 
     public static bool IsSentinel(double latitude, double longitude, double sentinelLatitude, double sentinelLongitude)
