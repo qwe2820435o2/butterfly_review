@@ -113,9 +113,36 @@ public class GmailService : IGmailService
 
         var content = new FormUrlEncodedContent(requestBody);
         var response = await client.PostAsync(url, content, cancellationToken);
-        response.EnsureSuccessStatusCode();
-
         var json = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            string? error = null;
+            string? errorDescription = null;
+            try
+            {
+                var errorResponse = JsonSerializer.Deserialize<JsonElement>(json);
+                if (errorResponse.TryGetProperty("error", out var errorElement))
+                {
+                    error = errorElement.GetString();
+                }
+                if (errorResponse.TryGetProperty("error_description", out var errorDescriptionElement))
+                {
+                    errorDescription = errorDescriptionElement.GetString();
+                }
+            }
+            catch (JsonException)
+            {
+            }
+
+            _logger.LogError(
+                "获取 Gmail access token 失败，状态码: {StatusCode}, error: {Error}, error_description: {ErrorDescription}",
+                (int)response.StatusCode, error, errorDescription);
+
+            throw new HttpRequestException(
+                $"Failed to get access token: {(int)response.StatusCode} {response.StatusCode} - error={error}, error_description={errorDescription}");
+        }
+
         var tokenResponse = JsonSerializer.Deserialize<JsonElement>(json);
 
         if (tokenResponse.TryGetProperty("access_token", out var accessTokenElement))
